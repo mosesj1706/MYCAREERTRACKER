@@ -21,3 +21,5 @@ data/server.log
 data/learning_plan.json
 data/master_profile.json
 data/resume.txt
+frontend/node_modules/
+frontend/dist/

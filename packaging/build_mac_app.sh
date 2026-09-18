@@ -5,6 +5,11 @@ set -euo pipefail
 PROJECT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$HOME/Applications/MYCAREERTRACKER.app"
 
+# Build the frontend bundle the server hosts (needs Node.js)
+if [ ! -f "$PROJECT/frontend/dist/index.html" ]; then
+  (cd "$PROJECT/frontend" && npm install --silent && npm run build --silent)
+fi
+
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 cat > "$APP/Contents/Info.plist" <<PLIST

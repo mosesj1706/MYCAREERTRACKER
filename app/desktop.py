@@ -1,5 +1,5 @@
-"""Run MYCAREERTRACKER as a desktop app: start the Streamlit server, show it in a native
-window, and stop the server when the window closes.
+"""Run MYCAREERTRACKER as a desktop app: start the API server (which also serves the built
+frontend), show it in a native window, and stop the server when the window closes.
 
     python -m app.desktop
 """
@@ -27,9 +27,7 @@ def start_server() -> subprocess.Popen | None:
     if port_open():  # already running (e.g. from ./run.sh)
         return None
     proc = subprocess.Popen(
-        [sys.executable, "-m", "streamlit", "run", str(ROOT / "app" / "ui" / "dashboard.py"),
-         "--server.headless", "true", "--server.port", str(PORT),
-         "--browser.gatherUsageStats", "false"],
+        [sys.executable, "-m", "uvicorn", "app.server:app", "--host", "127.0.0.1", "--port", str(PORT), "--log-level", "warning"],
         cwd=ROOT, stdout=open(LOG, "w"), stderr=subprocess.STDOUT,
         env={"PYTHONPATH": str(ROOT), "PATH": "/usr/bin:/bin", "HOME": str(ROOT.home())},
     )
@@ -38,9 +36,9 @@ def start_server() -> subprocess.Popen | None:
         if port_open():
             return proc
         if proc.poll() is not None:
-            raise RuntimeError(f"Streamlit exited early - see {LOG}")
+            raise RuntimeError(f"Server exited early - see {LOG}")
         time.sleep(0.2)
-    raise RuntimeError(f"Streamlit did not start within 20s - see {LOG}")
+    raise RuntimeError(f"Server did not start within 20s - see {LOG}")
 
 
 def main() -> None:
