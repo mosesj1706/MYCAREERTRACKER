@@ -1,4 +1,4 @@
-"""Run Career OS as a desktop app: start the Streamlit server, show it in a native
+"""Run MYCAREERTRACKER as a desktop app: start the Streamlit server, show it in a native
 window, and stop the server when the window closes.
 
     python -m app.desktop
@@ -51,7 +51,7 @@ def main() -> None:
         webbrowser.open(URL)
         input("Server running - press Enter to stop.")
         return
-    webview.create_window("Career OS", URL, width=1400, height=900, min_size=(900, 600))
+    webview.create_window("MYCAREERTRACKER", URL, width=1400, height=900, min_size=(900, 600))
     webview.start()  # blocks until the window is closed; atexit then stops the server
 
 

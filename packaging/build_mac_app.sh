@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Builds ~/Applications/CareerOS.app - a launcher that runs this project's desktop mode.
+# Builds ~/Applications/MYCAREERTRACKER.app - a launcher that runs this project's desktop mode.
 # Re-run after moving the project folder. Safe to re-run any time.
 set -euo pipefail
 PROJECT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="$HOME/Applications/CareerOS.app"
+APP="$HOME/Applications/MYCAREERTRACKER.app"
 
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
@@ -11,24 +11,24 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>CFBundleName</key><string>Career OS</string>
-  <key>CFBundleDisplayName</key><string>Career OS</string>
-  <key>CFBundleIdentifier</key><string>com.moses.careeros</string>
+  <key>CFBundleName</key><string>MYCAREERTRACKER</string>
+  <key>CFBundleDisplayName</key><string>MYCAREERTRACKER</string>
+  <key>CFBundleIdentifier</key><string>com.moses.mycareertracker</string>
   <key>CFBundleVersion</key><string>0.1</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleExecutable</key><string>CareerOS</string>
+  <key>CFBundleExecutable</key><string>MYCAREERTRACKER</string>
   <key>CFBundleIconFile</key><string>icon.icns</string>
   <key>LSMinimumSystemVersion</key><string>12.0</string>
   <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
 
-cat > "$APP/Contents/MacOS/CareerOS" <<LAUNCH
+cat > "$APP/Contents/MacOS/MYCAREERTRACKER" <<LAUNCH
 #!/usr/bin/env bash
 cd "$PROJECT"
 exec "$PROJECT/venv/bin/python" -m app.desktop
 LAUNCH
-chmod +x "$APP/Contents/MacOS/CareerOS"
+chmod +x "$APP/Contents/MacOS/MYCAREERTRACKER"
 
 # Icon: render the rocket emoji to an .icns (best effort; app works without it)
 if command -v python3 >/dev/null; then
@@ -37,4 +37,4 @@ fi
 
 touch "$APP"  # nudge Finder/Launchpad to pick up the bundle
 echo "Built: $APP"
-echo "Open it from Launchpad / Spotlight ('Career OS') or: open \"$APP\""
+echo "Open it from Launchpad / Spotlight ('MYCAREERTRACKER') or: open \"$APP\""

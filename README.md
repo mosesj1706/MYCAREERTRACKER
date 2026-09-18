@@ -1,4 +1,4 @@
-# Career OS
+# MYCAREERTRACKER
 
 A personal job-search system that closes the loop between *what the market wants* and *what I can prove*.
 
@@ -47,7 +47,7 @@ pip install -r requirements.txt
 cp .env.example .env            # then paste your Anthropic API key into .env
 ./run.sh                        # browser
 # or, on macOS:
-./packaging/build_mac_app.sh    # creates ~/Applications/CareerOS.app
+./packaging/build_mac_app.sh    # creates ~/Applications/MYCAREERTRACKER.app
 ```
 
 First run: go to **Profile → Build from resume**, upload a PDF, and set the target role. Everything else reads from that profile.

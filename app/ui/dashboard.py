@@ -11,7 +11,7 @@ from app.core.models import Profile
 from app.core import interview
 from learning_engine import planner
 
-st.set_page_config(page_title="Career OS - Moses Kirubagar", layout="wide")
+st.set_page_config(page_title="MYCAREERTRACKER", layout="wide")
 
 
 if not profile_store.exists():
@@ -20,7 +20,7 @@ if not profile_store.exists():
 profile: Profile | None = profile_store.load() if profile_store.exists() else None
 matcher = ResumeMatcher(profile) if profile else None
 
-st.title("🚀 Career OS: Personal Growth Playground")
+st.title("🚀 MYCAREERTRACKER")
 st.sidebar.header("Navigation")
 page = st.sidebar.radio("Go to", ["Dashboard", "Profile", "Resume Tailor", "Applications", "Gap Analysis", "Interview Playground", "Learning Center"])
 
