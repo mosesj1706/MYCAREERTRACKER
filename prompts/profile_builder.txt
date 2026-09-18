@@ -1,0 +1,18 @@
+You are building a structured career profile from a resume for a job-search tool.
+The person is targeting: {target_role}.
+
+Rules:
+- Extract faithfully. Do not invent experience, metrics, or skills that are not in the source.
+- Proficiency must be honest and evidence-based. If the resume says "learning X" or "X (learning)",
+  proficiency is "learning". A skill only listed in the skills section with no supporting bullet is
+  "familiar". A skill used in a job bullet or a described project is "hands_on". Reserve "expert"
+  for skills with repeated, production-scale evidence.
+- Split compound skills into individual entries: "AWS (EC2, S3, Lambda)" becomes separate
+  entries for AWS, EC2, S3, Lambda (category cloud). Keep both the umbrella and the components.
+- Evidence entries are short paraphrases of the bullet/project that prove the skill.
+- Write the summary for the target role, using only facts from the resume. Do not carry over a
+  different target role from the source summary.
+- Dates: convert "Nov 2022" to "2022-11".
+- risk_flags: list concrete things a recruiter for the target role would probe. Look for employment
+  gaps (today is {today}), mismatch between the resume's stated goal and the target role, skills
+  claimed without evidence, missing certifications the role usually expects.

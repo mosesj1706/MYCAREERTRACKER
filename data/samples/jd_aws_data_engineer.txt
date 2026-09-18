@@ -1,0 +1,29 @@
+Data Engineer (AWS) — Chennai / Hybrid
+Freshworks-style SaaS company, Data Platform team
+
+About the role
+We're looking for a Data Engineer to build and operate the pipelines that feed our analytics and ML teams. You'll own ingestion from product databases and third-party APIs into our AWS lakehouse, model the data for analysts, and keep it reliable.
+
+What you'll do
+- Design, build and maintain batch and streaming ETL/ELT pipelines on AWS (Glue, Lambda, Kinesis, Step Functions)
+- Orchestrate workflows with Apache Airflow (MWAA)
+- Model data in Redshift and the S3 data lake (Parquet, partitioning, Athena)
+- Write performant PySpark and SQL transformations
+- Implement data quality checks, monitoring and alerting (CloudWatch, Great Expectations or similar)
+- Manage infrastructure as code with Terraform and CI/CD via GitHub Actions
+- Partner with analysts and data scientists to understand requirements and deliver datasets
+
+Minimum qualifications
+- 2+ years building data pipelines in production
+- Strong Python and SQL
+- Hands-on AWS experience: S3, Lambda, IAM, Glue or EMR
+- Experience with a workflow orchestrator (Airflow preferred)
+- Experience with a columnar warehouse (Redshift, Snowflake or BigQuery)
+- Bachelor's degree in CS, Engineering or related field
+
+Preferred qualifications
+- AWS Data Engineer Associate or Solutions Architect Associate certification
+- dbt experience
+- Streaming experience (Kinesis or Kafka)
+- Docker and containerised deployments
+- Exposure to ML feature pipelines

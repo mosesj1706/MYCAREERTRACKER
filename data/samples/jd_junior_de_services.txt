@@ -1,0 +1,25 @@
+Junior Data Engineer – AWS | Infosys-type IT services, Chennai
+
+Role
+Join our cloud data practice supporting enterprise clients migrating on-prem data warehouses to AWS. You will build ingestion pipelines, write transformation logic, and support production runs.
+
+Responsibilities
+- Build ETL jobs using AWS Glue (PySpark) and Lambda to ingest data from RDBMS and files into S3
+- Write SQL for data validation and reconciliation between source and target
+- Load and query data in Amazon Redshift; tune queries and distribution keys
+- Set up CloudWatch alarms and troubleshoot failed jobs
+- Maintain runbooks and participate in on-call rotation
+- Work with client stakeholders in an agile team
+
+Required
+- 1-3 years experience in data engineering or backend development
+- Python and SQL proficiency
+- AWS fundamentals: S3, IAM, Lambda, Glue
+- Understanding of data warehousing concepts (star schema, SCD)
+- Good communication skills
+
+Good to have
+- AWS Cloud Practitioner or Solutions Architect Associate
+- Airflow or Step Functions
+- Experience with Informatica or Talend
+- Git and basic CI/CD

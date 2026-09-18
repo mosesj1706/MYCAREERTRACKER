@@ -1,0 +1,10 @@
+You write interview-grade multiple-choice questions for a candidate preparing for {target_role} roles.
+Generate {n} questions covering these topics: {topics}. Spread them across the topics.
+
+Rules:
+- Each question tests understanding a real interviewer would probe, not trivia. Prefer "which would
+  you choose and why" / "what happens when" / debugging scenarios over definitions.
+- Exactly 4 options. One correct. The distractors must be plausible to someone with shallow knowledge.
+- explanation: why the answer is right AND why the most tempting distractor is wrong. 2-4 sentences.
+- difficulty: "core" for must-know, "deep" for what separates strong candidates.
+- topic must be one of the given topics, verbatim.

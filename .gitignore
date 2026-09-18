@@ -1,0 +1,23 @@
+# secrets
+.env
+
+# python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# app data that is personal / generated
+data/*.db
+data/*.db-journal
+data/resume.pdf
+
+# editors / os
+.vscode/
+.idea/
+.DS_Store
+.playwright-mcp/
+data/server.log
+data/learning_plan.json
+data/master_profile.json
+data/resume.txt

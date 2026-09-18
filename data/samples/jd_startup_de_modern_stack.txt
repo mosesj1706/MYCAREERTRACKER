@@ -1,0 +1,26 @@
+Data Engineer — Series B fintech startup (Bangalore, remote-friendly)
+
+We are a 12-person data team building the analytics foundation for a lending product. You will own pipelines end to end.
+
+You will
+- Build and maintain ELT pipelines from Postgres, Kafka and SaaS APIs into Snowflake
+- Model data with dbt (staging → marts), with tests and documentation
+- Orchestrate with Airflow (Astronomer)
+- Implement data quality monitoring (Great Expectations / Elementary)
+- Own cost and performance of the warehouse
+- Ship infrastructure changes via Terraform and GitHub Actions
+- Build Python services for event ingestion and reverse ETL
+
+Requirements
+- 3+ years in data engineering
+- Expert SQL, strong Python
+- dbt and Airflow in production
+- Snowflake, BigQuery or Redshift
+- Kafka or another streaming platform
+- Docker, Kubernetes basics
+- Strong written communication; we are async-first
+
+Nice to have
+- Fintech or lending domain experience
+- AWS (S3, Lambda, ECS)
+- Data privacy / PII handling experience
