@@ -1,0 +1,28 @@
+Data & AI Engineer (AWS) — Bangalore / Remote India
+Mid-size product company building GenAI features on top of a lakehouse
+
+The role
+You will build the data foundations that power our AI features and productionise the LLM/RAG pipelines that use them. You sit between the data platform and the ML team.
+
+Responsibilities
+- Build and operate ETL/ELT pipelines on AWS (Glue, Lambda, Step Functions, S3, Athena) feeding both analytics and AI workloads
+- Design and maintain embedding and retrieval pipelines: chunking, embedding generation, vector storage in Amazon OpenSearch or pgvector, freshness and re-indexing
+- Integrate LLMs through Amazon Bedrock (Claude, Titan) with prompt templates, structured outputs, guardrails and evaluation
+- Build feature pipelines and batch inference jobs on SageMaker; register models and monitor drift
+- Write robust Python services (FastAPI) and SQL; instrument everything with CloudWatch
+- Own infrastructure as code with Terraform or CDK; ship via GitHub Actions
+- Work with product and ML engineers to turn prototypes into reliable, cost-aware systems
+
+Requirements
+- 2+ years in data engineering or backend engineering on AWS
+- Strong Python and SQL
+- Hands-on with S3, Lambda, IAM, Glue or EMR; Athena or Redshift
+- Practical experience building LLM-powered applications (prompting, structured outputs, evaluation)
+- Understanding of embeddings, vector search and RAG architecture
+- Experience with Airflow or Step Functions orchestration
+
+Nice to have
+- Amazon Bedrock and SageMaker in production
+- AWS Solutions Architect Associate, Data Engineer Associate or Machine Learning Specialty
+- Docker, ECS/EKS
+- Experience with LLM evaluation frameworks or observability (LangSmith, Bedrock Evaluations)
