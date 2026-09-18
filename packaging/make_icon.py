@@ -1,4 +1,4 @@
-"""Render an emoji into an .icns using only macOS built-ins (Cocoa via pyobjc + iconutil)."""
+"""Render the MCT wordmark into an .icns using only macOS built-ins (Cocoa via pyobjc + iconutil)."""
 import subprocess
 import sys
 import tempfile
@@ -14,10 +14,14 @@ except ImportError:
 def render(size: int, out: Path) -> None:
     img = NSImage.alloc().initWithSize_((size, size))
     img.lockFocus()
-    NSColor.colorWithCalibratedRed_green_blue_alpha_(0.11, 0.12, 0.20, 1).setFill()
-    from AppKit import NSBezierPath
+    NSColor.colorWithCalibratedRed_green_blue_alpha_(0.31, 0.42, 1.0, 1).setFill()  # accent #4f6bff
+    from AppKit import NSBezierPath, NSForegroundColorAttributeName, NSKernAttributeName
     NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(NSMakeRect(0, 0, size, size), size * 0.22, size * 0.22).fill()
-    text = NSAttributedString.alloc().initWithString_attributes_("🚀", {NSFontAttributeName: NSFont.systemFontOfSize_(size * 0.62)})
+    text = NSAttributedString.alloc().initWithString_attributes_("MCT", {
+        NSFontAttributeName: NSFont.boldSystemFontOfSize_(size * 0.36),
+        NSForegroundColorAttributeName: NSColor.whiteColor(),
+        NSKernAttributeName: -size * 0.012,
+    })
     w, h = text.size()
     text.drawAtPoint_(((size - w) / 2, (size - h) / 2))
     img.unlockFocus()

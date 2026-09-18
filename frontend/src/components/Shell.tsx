@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { LayoutDashboard, UserRound, Target, KanbanSquare, Radar, MessagesSquare, GraduationCap, Sun, Moon, Rocket, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { LayoutDashboard, UserRound, Target, KanbanSquare, Radar, MessagesSquare, GraduationCap, Sun, Moon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Profile } from "../lib/api";
 
@@ -49,7 +49,7 @@ export function Shell() {
     <div className="flex h-full">
       <aside className={clsx("shrink-0 border-r border-border bg-surface flex flex-col transition-[width] duration-200", collapsed ? "w-[64px]" : "w-[236px]")}>
         <div className="h-14 flex items-center gap-2.5 px-4 border-b border-border">
-          <div className="size-8 rounded-lg bg-accent grid place-items-center text-white shrink-0"><Rocket className="size-4" /></div>
+          <div className="h-8 min-w-8 px-1.5 rounded-lg bg-accent grid place-items-center text-white shrink-0 font-extrabold text-[11px] tracking-tight leading-none select-none">MCT</div>
           {!collapsed && <div className="font-bold tracking-tight text-[15px] truncate">MYCAREERTRACKER</div>}
         </div>
         <nav className="flex-1 p-2 space-y-0.5">
