@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { clsx } from "clsx";
-import { ExternalLink, GripVertical, RefreshCw, Trash2, Target, ChevronRight } from "lucide-react";
+import { ExternalLink, GripVertical, RefreshCw, Trash2, Target, ChevronRight, Download } from "lucide-react";
 import { api, type Application } from "../lib/api";
 import { Badge, Button, Empty, Gauge, PageHeader, Textarea, Input } from "../components/ui";
 import { Drawer } from "../components/Drawer";
@@ -131,6 +131,7 @@ function Detail({ a, onClose }: { a: Application; onClose: () => void }) {
       <div className="grid grid-cols-2 gap-2">
         <Button onClick={() => rescore.mutate()} loading={rescore.isPending}><RefreshCw className="size-4" /> Re-score with current profile</Button>
         <Link to="/interview" state={{ app_id: a.id }}><Button className="w-full">Practice for this job</Button></Link>
+        {a.tailored && <a href={`/api/applications/${a.id}/resume.pdf`} download><Button className="w-full"><Download className="size-4" /> Tailored resume PDF</Button></a>}
       </div>
       <div className="space-y-2">
         <label className="text-[12px] font-medium text-muted uppercase tracking-wider">Job URL</label>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clsx } from "clsx";
-import { FileUp, Flag, Link2, MapPin, Save, Sparkles } from "lucide-react";
+import { Download, FileUp, Flag, Link2, MapPin, Save, Sparkles } from "lucide-react";
 import { api, type Profile } from "../lib/api";
 import { Badge, Button, Card, CardHeader, Input, PageHeader, Skeleton, Textarea } from "../components/ui";
 import { useToast } from "../components/Toast";
@@ -45,7 +45,7 @@ export default function ProfilePage() {
   return (
     <div>
       <PageHeader title="Profile" subtitle={`Updated ${p.updated_at} · ${p.hands_on} hands-on · ${p.learning} learning · ${p.years} yrs`}
-        actions={<div className="flex gap-2"><Button variant="secondary" onClick={() => setLinkedin(true)}><Link2 className="size-4" /> LinkedIn text</Button><Button variant="secondary" onClick={() => setJson(json === null ? JSON.stringify(p, null, 2) : null)}>{json === null ? "Edit as JSON" : "Close editor"}</Button></div>} />
+        actions={<div className="flex gap-2"><a href="/api/resume.pdf" download><Button variant="secondary"><Download className="size-4" /> Resume PDF</Button></a><Button variant="secondary" onClick={() => setLinkedin(true)}><Link2 className="size-4" /> LinkedIn text</Button><Button variant="secondary" onClick={() => setJson(json === null ? JSON.stringify(p, null, 2) : null)}>{json === null ? "Edit as JSON" : "Close editor"}</Button></div>} />
       <LinkedInDrawer open={linkedin} onClose={() => setLinkedin(false)} />
       <details className="mb-4"><summary className="text-[13px] text-muted cursor-pointer hover:text-text">Rebuild from a resume</summary><div className="mt-3">{Builder}</div></details>
       {json !== null && (

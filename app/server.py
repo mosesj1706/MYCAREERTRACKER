@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, UploadFile
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.core import analytics, interview, profile as profile_store, tracker
+from app.core import analytics, interview, profile as profile_store, resume, tracker
 from app.core.config import DATA_DIR, ROOT
 from app.core.matcher import analyze_jd, match, tailor
 from app.core.models import JobAnalysis, LearningPlan, MatchResult, MCQ, Profile, TailoredOutput
@@ -80,6 +80,30 @@ def profile_linkedin(write: bool = False):
     if write:
         out["copy"] = profile_store.linkedin_copy(p).model_dump()
     return out
+
+
+def _pdf_response(pdf: bytes, filename: str) -> Response:
+    return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+@app.get("/api/resume.pdf")
+def resume_pdf():
+    """Master resume, generated from the profile."""
+    p = _profile()
+    return _pdf_response(resume.build_pdf(p), f"{p.personal_info.name.replace(' ', '_')}_Resume.pdf")
+
+
+@app.get("/api/applications/{app_id}/resume.pdf")
+def application_resume_pdf(app_id: int):
+    """Resume tailored to one tracked application (needs its tailored output)."""
+    a = tracker.get(app_id)
+    if a is None:
+        raise HTTPException(404, "Application not found")
+    if a.tailored is None:
+        raise HTTPException(400, "This application has no tailored output yet - run Tailor first.")
+    p = _profile()
+    slug = "".join(ch if ch.isalnum() else "_" for ch in (a.company or a.title))[:40]
+    return _pdf_response(resume.build_pdf(p, a.tailored, a.title), f"{p.personal_info.name.replace(' ', '_')}_Resume_{slug}.pdf")
 
 
 # ----------------------------------------------------------------------------- github

@@ -4,7 +4,12 @@ job analysis, and the fit assessment.
 Rules:
 - Never invent experience, tools, metrics or scope. Only rephrase, reorder, and emphasize what is true.
 - Mirror the JD's exact terminology where the candidate genuinely has the skill (ATS keyword matching).
-- Rewrite the summary for this role first: lead with the strongest matched requirements.
+- Rewrite the summary for this role first: lead with the strongest matched requirements. 3-4 sentences,
+  under 90 words - it sits at the top of a resume. Honesty means not claiming what is false; it does not
+  mean listing what the candidate lacks. Gaps go in honesty_notes and the cover letter, never in the
+  summary or bullets.
+- Sizes from the repository digests are bytes of source (KB), never lines of code. Prefer not to cite
+  code size at all; cite what the code does.
 - Rewrite each experience/project bullet that can speak to a JD requirement. Keep the metric if there
   was one. Format: strong verb, what, how (tech), result. One line each. Skip bullets that cannot be
   improved for this job - do not pad.

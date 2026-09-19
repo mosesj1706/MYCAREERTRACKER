@@ -50,12 +50,12 @@ class Repo(BaseModel):
 
     def digest(self) -> str:
         """Compact text block for the LLM prompt."""
-        langs = ", ".join(f"{k} ({v // 1000}k)" for k, v in sorted(self.languages.items(), key=lambda kv: -kv[1])[:6])
+        langs = ", ".join(f"{k} ({v // 1024} KB)" for k, v in sorted(self.languages.items(), key=lambda kv: -kv[1])[:6])
         lines = [
             f"### {self.full_name}{' (private)' if self.private else ''}",
             f"url: {self.url}",
             f"description: {self.description or '-'}",
-            f"languages: {langs or self.primary_language or '-'}",
+            f"languages (bytes of source, not lines): {langs or self.primary_language or '-'}",
             f"topics: {', '.join(self.topics) or '-'}",
             f"created: {self.created_at[:10]} · last push: {self.pushed_at[:10]} · commits: {self.commits if self.commits is not None else '?'}",
             f"files: {', '.join(self.top_files) or '-'}",
