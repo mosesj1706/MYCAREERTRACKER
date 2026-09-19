@@ -23,6 +23,7 @@ Profile ──► JD match ──► Gaps ──► Learning plan + Mock intervi
 | **Gap Analysis** | Every requirement from every tracked JD, weighted by importance and by how far the application progressed. Answers "what should I learn first?" with data from the jobs I'm actually pursuing. |
 | **Interview** | Streamed multi-turn mock interview with a recruiter persona that has read the profile, the JD, and the fit assessment — so it goes straight for the gaps. Grades every answer (grade / critique / pro answer). Plus scenario-style MCQs generated from the current gap list, with accuracy tracked per topic. |
 | **Learning** | A plan generated from the gap analysis: one portfolio project decomposed into per-skill steps, scoped to ≤12 weeks. Resources come from real web search (only URLs the search actually returned). "Mark as learned" promotes the skill in the profile. |
+| **GitHub sync** | Pulls your repositories (languages, file tree, README, commit count) and asks the model what they *prove*. Evidence is attached to skills as `repo-name: what the code shows`; proficiency only ever rises, capped at hands-on, and only where the code visibly uses the skill. Empty repos and forks are ignored; the model also lists what a recruiter will notice on your GitHub (e.g. "no AWS/Terraform code anywhere"). Public repos need no login; `GITHUB_TOKEN` in `.env` adds private repos and a higher rate limit. |
 | **Dashboard** | KPIs, learn-next ranking, best current match, weekly activity, pipeline funnel, MCQ trend, plan progress. Dark and light themes; `g`+key keyboard navigation. |
 
 ## How the AI parts work
@@ -56,7 +57,7 @@ cp .env.example .env            # then paste your Anthropic API key into .env
 
 First run: go to **Profile → Build from resume**, upload a PDF, and set the target role. Everything else reads from that profile.
 
-Personal data (`data/master_profile.json`, `data/career.db`, `data/learning_plan.json`, `.env`) is gitignored. Three sample JDs live in `data/samples/` for trying the matcher.
+Personal data (`data/master_profile.json`, `data/career.db`, `data/learning_plan.json`, `data/github_repos.json`, `.env`) is gitignored. Four sample JDs live in `data/samples/` for trying the matcher.
 
 ## Layout
 

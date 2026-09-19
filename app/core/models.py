@@ -107,6 +107,24 @@ class Profile(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# GitHub -> profile evidence
+# ---------------------------------------------------------------------------
+
+
+class SkillEvidence(BaseModel):
+    name: str = Field(description="Canonical skill name; reuse the profile's existing name when the skill exists")
+    category: SkillCategory
+    proficiency: Literal["familiar", "hands_on"] = Field(description="What the repos prove; never 'expert'")
+    evidence: list[str] = Field(description="One sentence per repo that proves it, starting with the repo name")
+
+
+class GitHubMerge(BaseModel):
+    skills: list[SkillEvidence] = Field(description="Skills the repositories prove, existing or new")
+    projects: list[Project] = Field(description="One per repository that contains code")
+    notes: list[str] = Field(default_factory=list, description="Anything notable a recruiter would see on this GitHub, good or bad")
+
+
+# ---------------------------------------------------------------------------
 # Job descriptions and matching
 # ---------------------------------------------------------------------------
 

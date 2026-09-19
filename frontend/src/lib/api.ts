@@ -76,4 +76,8 @@ export interface Analytics {
   scores: { application: string; status: string; score: number }[];
   mcq_trend: { week: string; accuracy: number; answered: number }[];
 }
+export interface GitHubRepo { name: string; full_name: string; url: string; description?: string | null; private: boolean; primary_language?: string | null; languages: Record<string, number>; topics: string[]; stars: number; created_at: string; pushed_at: string; commits?: number | null; top_files: string[]; has_code: boolean }
+export interface GitHubSnapshot { username: string; fetched_at: string; merged_at?: string | null; notes: string[]; repos: GitHubRepo[] }
+export interface GitHubStatus { username?: string | null; snapshot?: GitHubSnapshot | null }
+export interface GitHubSyncResult { snapshot: GitHubSnapshot; changes: { skill: string; from?: Proficiency | null; to: Proficiency }[]; profile: Profile }
 export interface InterviewRecord { id: number; created_at: string; summary?: string | null; title?: string | null; company?: string | null; transcript: { role: string; content: string }[] }

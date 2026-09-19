@@ -20,6 +20,7 @@ data/resume.pdf
 data/server.log
 data/learning_plan.json
 data/master_profile.json
+data/github_repos.json
 data/resume.txt
 frontend/node_modules/
 frontend/dist/

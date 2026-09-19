@@ -5,6 +5,7 @@ import { FileUp, Flag, Link2, MapPin, Save, Sparkles } from "lucide-react";
 import { api, type Profile } from "../lib/api";
 import { Badge, Button, Card, CardHeader, Input, PageHeader, Skeleton, Textarea } from "../components/ui";
 import { useToast } from "../components/Toast";
+import GitHubCard from "../components/GitHubCard";
 
 const PROF: Record<string, { label: string; tone: "success" | "accent" | "warn" | "neutral" }> = {
   expert: { label: "Expert", tone: "success" }, hands_on: { label: "Hands-on", tone: "success" }, familiar: { label: "Familiar", tone: "warn" }, learning: { label: "Learning", tone: "neutral" },
@@ -80,10 +81,11 @@ export default function ProfilePage() {
           </Card>
           <Card>
             <CardHeader title="Projects" />
-            <div className="px-5 pb-5 space-y-3">{p.projects.map((pr, i) => <div key={i}><div className="font-medium">{pr.name}</div><div className="text-[13px] text-muted mt-0.5">{pr.description}</div><div className="flex flex-wrap gap-1 mt-1.5">{pr.technologies.map((t) => <Badge key={t}>{t}</Badge>)}</div></div>)}</div>
+            <div className="px-5 pb-5 space-y-3">{p.projects.map((pr, i) => <div key={i}><div className="font-medium">{pr.url ? <a href={pr.url} target="_blank" rel="noreferrer" className="hover:underline inline-flex items-center gap-1">{pr.name}<Link2 className="size-3.5 text-faint" /></a> : pr.name}</div><div className="text-[13px] text-muted mt-0.5">{pr.description}</div><div className="flex flex-wrap gap-1 mt-1.5">{pr.technologies.map((t) => <Badge key={t}>{t}</Badge>)}</div></div>)}</div>
           </Card>
         </div>
         <div className="space-y-4">
+          <GitHubCard />
           <Card>
             <CardHeader title="What a recruiter will probe" subtitle="Rehearse answers for each" />
             <ul className="px-5 pb-5 space-y-2.5">{p.risk_flags.map((r, i) => <li key={i} className="flex gap-2 text-[13px] text-muted"><Flag className="size-3.5 mt-0.5 shrink-0 text-warn" />{r}</li>)}</ul>

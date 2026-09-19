@@ -5,6 +5,7 @@
 import json
 import uuid
 from dataclasses import asdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ from app.core import analytics, interview, profile as profile_store, tracker
 from app.core.config import DATA_DIR, ROOT
 from app.core.matcher import analyze_jd, match, tailor
 from app.core.models import JobAnalysis, LearningPlan, MatchResult, MCQ, Profile, TailoredOutput
+from connectors import github
 from learning_engine import planner
 
 app = FastAPI(title="MYCAREERTRACKER API")
@@ -68,6 +70,46 @@ async def build_profile(target_role: str, file: UploadFile | None = None):
         raise HTTPException(400, "Upload a resume PDF.")
     profile_store.save(p)
     return get_profile()
+
+
+# ----------------------------------------------------------------------------- github
+def _github_dict(snap: github.GitHubSnapshot | None) -> dict | None:
+    if snap is None:
+        return None
+    return snap.model_dump(exclude={"repos"}) | {
+        "repos": [r.model_dump(exclude={"readme"}) | {"has_code": r.has_code} for r in snap.repos],
+    }
+
+
+@app.get("/api/github")
+def github_status():
+    snap = github.load_snapshot()
+    username = snap.username if snap else (github.username_from_url(profile_store.load().personal_info.github) if profile_store.exists() else None)
+    return {"username": username, "snapshot": _github_dict(snap)}
+
+
+class GitHubSync(BaseModel):
+    username: str
+
+
+@app.post("/api/github/sync")
+def github_sync(body: GitHubSync):
+    """Fetch repos, ask the model what they prove, apply the evidence to the profile."""
+    p = _profile()
+    try:
+        snap = github.fetch(body.username.strip())
+    except github.GitHubError as e:
+        raise HTTPException(429 if "rate limit" in str(e) else 400, str(e))
+    before = {s.name: s.proficiency for s in p.skills}
+    merge = profile_store.propose_github_merge(p, snap)
+    p = profile_store.apply_github_merge(p, merge, snap)
+    profile_store.save(p)
+    snap.notes = merge.notes
+    snap.merged_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    snap.save()
+    changes = [{"skill": s.name, "from": before.get(s.name), "to": s.proficiency}
+               for s in p.skills if before.get(s.name) != s.proficiency]
+    return {"snapshot": _github_dict(snap), "changes": changes, "profile": get_profile()}
 
 
 # ----------------------------------------------------------------------------- matching
