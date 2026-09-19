@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.core import analytics, interview, profile as profile_store, resume, tracker
+from app.core import analytics, interview, profile as profile_store, resume, tracker, usage
 from app.core.config import DATA_DIR, ROOT
 from app.core.matcher import analyze_jd, match, tailor
 from app.core.models import JobAnalysis, LearningPlan, MatchResult, MCQ, Profile, TailoredOutput
@@ -104,6 +104,12 @@ def application_resume_pdf(app_id: int):
     p = _profile()
     slug = "".join(ch if ch.isalnum() else "_" for ch in (a.company or a.title))[:40]
     return _pdf_response(resume.build_pdf(p, a.tailored, a.title), f"{p.personal_info.name.replace(' ', '_')}_Resume_{slug}.pdf")
+
+
+@app.get("/api/usage")
+def llm_usage():
+    from app.core import llm, providers
+    return usage.summary() | {"model": llm.MODEL, "basic_provider": providers.name() if providers.available() else None}
 
 
 # ----------------------------------------------------------------------------- github

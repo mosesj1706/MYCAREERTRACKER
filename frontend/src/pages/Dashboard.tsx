@@ -5,6 +5,7 @@ import { ArrowRight, Briefcase, Send, Reply, Percent, MessagesSquare, BrainCircu
 import { api, type Analytics, type Application, type Gap, type LearningPlan, type Profile } from "../lib/api";
 import { Button, Card, CardHeader, Empty, Gauge, PageHeader, Progress, Skeleton, Stat, Badge } from "../components/ui";
 import { WeeklyActivity, Funnel, McqTrend } from "../components/charts";
+import SpendCard from "../components/SpendCard";
 
 const fade = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } };
 
@@ -117,6 +118,8 @@ export default function Dashboard() {
           </Card>
         </motion.div>
       </div>
+
+      <motion.div {...fade} transition={{ delay: 0.4 }} className="mt-4"><SpendCard /></motion.div>
     </div>
   );
 }

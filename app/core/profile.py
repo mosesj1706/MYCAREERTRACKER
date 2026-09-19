@@ -13,7 +13,7 @@ PROFICIENCY_RANK = {"learning": 0, "familiar": 1, "hands_on": 2, "expert": 3}
 
 def build_from_text(resume_text: str, target_role: str) -> Profile:
     system = load_prompt("profile_builder").format(target_role=target_role, today=date.today().isoformat())
-    return llm.extract(Profile, user=f"<resume>\n{resume_text}\n</resume>", system=system, effort="high")
+    return llm.extract(Profile, user=f"<resume>\n{resume_text}\n</resume>", system=system, effort="high", feature="profile_build")
 
 
 def build_from_pdf(pdf_path: str | Path, target_role: str) -> Profile:
@@ -48,7 +48,7 @@ def propose_github_merge(profile: Profile, snap: GitHubSnapshot) -> GitHubMerge:
     repos = "\n\n".join(r.digest() for r in snap.repos)
     user = (f"<current_skills>\n{skills}\n</current_skills>\n\n<current_projects>\n{projects}\n</current_projects>\n\n"
             f"<repositories owner=\"{snap.username}\">\n{repos}\n</repositories>")
-    return llm.extract(GitHubMerge, user=user, system=system, effort="high")
+    return llm.extract(GitHubMerge, user=user, system=system, effort="high", feature="github_merge")
 
 
 def apply_github_merge(profile: Profile, merge: GitHubMerge, snap: GitHubSnapshot) -> Profile:
@@ -137,4 +137,5 @@ def linkedin_sections(profile: Profile) -> list[dict]:
 
 def linkedin_copy(profile: Profile) -> LinkedInCopy:
     system = load_prompt("linkedin_writer").format(target_role=profile.target.primary_role)
-    return llm.extract(LinkedInCopy, user=f"<candidate_profile>\n{profile.model_dump_json(indent=1)}\n</candidate_profile>", system=system, effort="medium")
+    return llm.extract(LinkedInCopy, user=f"<candidate_profile>\n{profile.model_dump_json(indent=1)}\n</candidate_profile>", system=system,
+                       effort="low", feature="linkedin", tier="basic")

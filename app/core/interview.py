@@ -44,7 +44,7 @@ class InterviewSession:
     def _send(self, user_text: str) -> Iterator[str]:
         self.messages.append({"role": "user", "content": user_text})
         chunks: list[str] = []
-        for chunk in llm.stream(self.messages, system=self.system, effort="medium"):
+        for chunk in llm.stream(self.messages, system=self.system, effort="low", feature="interview"):
             chunks.append(chunk)
             yield chunk
         self.messages.append({"role": "assistant", "content": "".join(chunks)})
@@ -79,7 +79,7 @@ def list_sessions() -> list[dict]:
 
 def generate_mcqs(topics: list[str], n: int, target_role: str) -> list[MCQ]:
     system = load_prompt("mcq_generator").format(target_role=target_role, n=n, topics=", ".join(topics))
-    return llm.extract(MCQSet, user="Generate the questions now.", system=system, effort="medium").questions
+    return llm.extract(MCQSet, user="Generate the questions now.", system=system, effort="low", feature="mcq", tier="basic").questions
 
 
 def record_mcq(q: MCQ, correct: bool) -> None:

@@ -26,7 +26,7 @@ def generate_plan(profile: Profile, gaps: list[SkillDemand], weekly_hours: int =
         target_role=profile.target.primary_role, weekly_hours=weekly_hours, today=date.today().isoformat())
     user = (f"<candidate_profile>\n{profile.model_dump_json(indent=1)}\n</candidate_profile>\n\n"
             f"<gaps>\n{gap_text}\n</gaps>")
-    plan = llm.extract(LearningPlan, user=user, system=system, effort="high")
+    plan = llm.extract(LearningPlan, user=user, system=system, effort="medium", feature="learning_plan")
     # Skill plans decompose the project, so the project's milestones are the real critical path.
     total = sum(m.hours for m in plan.portfolio_project.milestones)
     plan.weekly_hours_assumed = weekly_hours
@@ -60,6 +60,7 @@ def find_resources(skill: str, profile: Profile) -> list[Resource]:
                    f"with different phrasings, then list what you found with titles and URLs."}],
         output_config={"effort": "low"},
     )
+    llm._record("web_search", response.usage)
     found: dict[str, dict] = {}
     for block in response.content:
         if block.type == "web_search_tool_result" and isinstance(block.content, list):
@@ -73,7 +74,7 @@ def find_resources(skill: str, profile: Profile) -> list[Resource]:
     system = load_prompt("resource_ranker").format(target_role=profile.target.primary_role, skill=skill)
     user = (f"<search_results>\n{results_text}\n</search_results>\n\n<notes>\n{model_notes}\n</notes>\n\n"
             f"<candidate_profile_summary>\n{profile.summary}\n</candidate_profile_summary>")
-    ranked = llm.extract(ResourceList, user=user, system=system, effort="low").resources
+    ranked = llm.extract(ResourceList, user=user, system=system, effort="low", feature="resources", tier="basic").resources
     return [r for r in ranked if r.url in found]  # hard guarantee: only real URLs
 
 
