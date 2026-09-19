@@ -4,7 +4,7 @@ from pathlib import Path
 
 from app.core import llm
 from app.core.config import PROFILE_PATH, load_prompt
-from app.core.models import GitHubMerge, Profile, Skill
+from app.core.models import GitHubMerge, LinkedInCopy, Profile, Skill
 from connectors.github import GitHubSnapshot
 from connectors.resume_pdf import extract_text
 
@@ -95,3 +95,46 @@ def apply_github_merge(profile: Profile, merge: GitHubMerge, snap: GitHubSnapsho
     if not profile.personal_info.github:
         profile.personal_info.github = f"https://github.com/{snap.username}"
     return profile
+
+
+# ----------------------------------------------------------------------------- LinkedIn export
+LINKEDIN_MAX = 2000  # LinkedIn's limit for a position or project description
+
+
+def _month(ym: str | None) -> str:
+    if not ym:
+        return "Present"
+    y, m = ym.split("-")
+    return f"{date(int(y), int(m), 1):%b %Y}"
+
+
+def _clip(text: str, limit: int = LINKEDIN_MAX) -> str:
+    return text if len(text) <= limit else text[: limit - 1].rsplit("\n", 1)[0] + "…"
+
+
+def linkedin_sections(profile: Profile) -> list[dict]:
+    """Copy-paste-ready blocks in LinkedIn's own field layout. No model call."""
+    out: list[dict] = []
+    for e in profile.experience:
+        kind = {"freelance": "Self-employed", "contractor": "Full-time (contract)", "full-time": "Full-time"}.get((e.employment_type or "").lower(), e.employment_type or "")
+        head = f"Title: {e.title}\nCompany: {e.company}\nEmployment type: {kind}\nDates: {_month(e.start)} - {_month(e.end)}\nLocation: {e.location or ''}"
+        desc = "\n".join(f"• {b}" for b in e.bullets)
+        out.append({"section": "Experience", "label": f"{e.title} · {e.company}", "fields": head, "text": _clip(desc)})
+    guvi = next((ed for ed in profile.education if "GUVI" in ed.institution), None)
+    if guvi:
+        out.append({"section": "Experience", "label": "Career break",
+                    "fields": f"Type: Career break - Professional development\nDates: {guvi.start_year or ''} - {guvi.end_year or ''}",
+                    "text": f"Completed the {guvi.degree} at {guvi.institution}, then self-studied AWS (Solutions Architect - Associate) before returning to full-time freelance work."})
+    for p in profile.projects:
+        desc = p.description + ("\n\nOutcomes: " + "; ".join(p.outcomes) if p.outcomes else "") + "\n\nStack: " + ", ".join(p.technologies)
+        out.append({"section": "Projects", "label": p.name, "fields": f"Name: {p.name}\nURL: {p.url or '(none)'}", "text": _clip(desc)})
+    strong = [s.name for s in profile.skills if s.proficiency in ("hands_on", "expert")]
+    soft = [s.name for s in profile.skills if s.proficiency == "familiar"]
+    out.append({"section": "Skills", "label": "Add these (hands-on, evidenced)", "fields": f"{len(strong)} skills", "text": ", ".join(strong)})
+    out.append({"section": "Skills", "label": "Only if you accept 'familiar'-level questions", "fields": f"{len(soft)} skills", "text": ", ".join(soft)})
+    return out
+
+
+def linkedin_copy(profile: Profile) -> LinkedInCopy:
+    system = load_prompt("linkedin_writer").format(target_role=profile.target.primary_role)
+    return llm.extract(LinkedInCopy, user=f"<candidate_profile>\n{profile.model_dump_json(indent=1)}\n</candidate_profile>", system=system, effort="medium")

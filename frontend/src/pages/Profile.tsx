@@ -6,6 +6,7 @@ import { api, type Profile } from "../lib/api";
 import { Badge, Button, Card, CardHeader, Input, PageHeader, Skeleton, Textarea } from "../components/ui";
 import { useToast } from "../components/Toast";
 import GitHubCard from "../components/GitHubCard";
+import LinkedInDrawer from "../components/LinkedInDrawer";
 
 const PROF: Record<string, { label: string; tone: "success" | "accent" | "warn" | "neutral" }> = {
   expert: { label: "Expert", tone: "success" }, hands_on: { label: "Hands-on", tone: "success" }, familiar: { label: "Familiar", tone: "warn" }, learning: { label: "Learning", tone: "neutral" },
@@ -17,6 +18,7 @@ export default function ProfilePage() {
   const [role, setRole] = useState("Cloud Data Engineer (AWS)");
   const [file, setFile] = useState<File | null>(null);
   const [json, setJson] = useState<string | null>(null);
+  const [linkedin, setLinkedin] = useState(false);
   const build = useMutation({
     mutationFn: async () => { const fd = new FormData(); if (file) fd.append("file", file); const r = await fetch(`/api/profile/build?target_role=${encodeURIComponent(role)}`, { method: "POST", body: fd }); if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText); return r.json() as Promise<Profile>; },
     onSuccess: (p) => { qc.setQueryData(["profile"], p); qc.invalidateQueries(); toast("success", "Profile built."); }, onError: (e) => toast("error", (e as Error).message),
@@ -43,7 +45,8 @@ export default function ProfilePage() {
   return (
     <div>
       <PageHeader title="Profile" subtitle={`Updated ${p.updated_at} · ${p.hands_on} hands-on · ${p.learning} learning · ${p.years} yrs`}
-        actions={<Button variant="secondary" onClick={() => setJson(json === null ? JSON.stringify(p, null, 2) : null)}>{json === null ? "Edit as JSON" : "Close editor"}</Button>} />
+        actions={<div className="flex gap-2"><Button variant="secondary" onClick={() => setLinkedin(true)}><Link2 className="size-4" /> LinkedIn text</Button><Button variant="secondary" onClick={() => setJson(json === null ? JSON.stringify(p, null, 2) : null)}>{json === null ? "Edit as JSON" : "Close editor"}</Button></div>} />
+      <LinkedInDrawer open={linkedin} onClose={() => setLinkedin(false)} />
       <details className="mb-4"><summary className="text-[13px] text-muted cursor-pointer hover:text-text">Rebuild from a resume</summary><div className="mt-3">{Builder}</div></details>
       {json !== null && (
         <Card className="p-4 mb-4"><Textarea rows={22} value={json} onChange={(e) => setJson(e.target.value)} className="num text-[12.5px]" /><div className="flex justify-end mt-2"><Button variant="primary" loading={save.isPending} onClick={() => { try { save.mutate(JSON.parse(json)); } catch { toast("error", "Invalid JSON"); } }}><Save className="size-4" /> Save</Button></div></Card>

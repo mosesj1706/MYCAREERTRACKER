@@ -72,6 +72,16 @@ async def build_profile(target_role: str, file: UploadFile | None = None):
     return get_profile()
 
 
+@app.get("/api/profile/linkedin")
+def profile_linkedin(write: bool = False):
+    """Copy-paste blocks for LinkedIn. `write=true` also drafts headline + About with the model."""
+    p = _profile()
+    out: dict[str, Any] = {"sections": profile_store.linkedin_sections(p)}
+    if write:
+        out["copy"] = profile_store.linkedin_copy(p).model_dump()
+    return out
+
+
 # ----------------------------------------------------------------------------- github
 def _github_dict(snap: github.GitHubSnapshot | None) -> dict | None:
     if snap is None:

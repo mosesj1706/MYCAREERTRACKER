@@ -124,6 +124,11 @@ class GitHubMerge(BaseModel):
     notes: list[str] = Field(default_factory=list, description="Anything notable a recruiter would see on this GitHub, good or bad")
 
 
+class LinkedInCopy(BaseModel):
+    headline: str = Field(description="Max 220 characters")
+    about: str = Field(description="900-1500 characters, first person")
+
+
 # ---------------------------------------------------------------------------
 # Job descriptions and matching
 # ---------------------------------------------------------------------------
