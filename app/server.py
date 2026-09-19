@@ -209,12 +209,16 @@ SESSIONS: dict[str, interview.InterviewSession] = {}
 class InterviewStart(BaseModel):
     app_id: int | None = None
     mode: str = "mixed"
+    project: str | None = None
 
 
 @app.post("/api/interview")
 def interview_start(body: InterviewStart):
-    sess = interview.InterviewSession(_profile(), mode=body.mode,
-                                      application=tracker.get(body.app_id) if body.app_id else None)
+    try:
+        sess = interview.InterviewSession(_profile(), mode=body.mode, project=body.project,
+                                          application=tracker.get(body.app_id) if body.app_id else None)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     sid = uuid.uuid4().hex
     SESSIONS[sid] = sess
     return {"session_id": sid}

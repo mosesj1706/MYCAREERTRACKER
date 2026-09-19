@@ -6,19 +6,24 @@ from app.core import db, llm
 from app.core.config import load_prompt
 from app.core.models import MCQ, MCQSet, Profile
 from app.core.tracker import Application
+from connectors import github
 
 
 class InterviewSession:
     """Holds the conversation. The big, stable context (persona + profile + job) goes in the
     system prompt with a cache breakpoint so every turn after the first is mostly cache reads."""
 
-    def __init__(self, profile: Profile, mode: str = "mixed", application: Application | None = None):
+    def __init__(self, profile: Profile, mode: str = "mixed", application: Application | None = None,
+                 project: str | None = None):
         self.profile = profile
         self.mode = mode
         self.application = application
+        self.project = project
         self.messages: list[dict] = []
 
         context = f"<candidate_profile>\n{profile.model_dump_json(indent=1)}\n</candidate_profile>"
+        if project:
+            context += "\n\n" + project_context(profile, project)
         if application:
             context += (
                 f"\n\n<job company={application.company!r}>\n{application.jd_text}\n</job>"
@@ -93,3 +98,18 @@ def mcq_stats() -> list[dict]:
         ).fetchall()
     out = [{"topic": r["topic"], "answered": r["n"], "accuracy": round(100 * r["n_right"] / r["n"])} for r in rows]
     return sorted(out, key=lambda d: (d["accuracy"], -d["answered"]))
+
+
+def project_context(profile: Profile, name: str) -> str:
+    """The profile's project entry plus, when its URL matches a synced GitHub repo, that repo's
+    README, file tree and infra files - so a deep-dive asks about the real implementation."""
+    proj = next((p for p in profile.projects if p.name == name), None)
+    if proj is None:
+        raise ValueError(f"No project named {name!r} on the profile.")
+    out = f"<project>\n{proj.model_dump_json(indent=1)}\n</project>"
+    snap = github.load_snapshot()
+    if snap and proj.url:
+        repo = next((r for r in snap.repos if r.url.lower().rstrip("/") == proj.url.lower().rstrip("/")), None)
+        if repo:
+            out += f"\n\n<repository>\n{repo.digest()}\n</repository>"
+    return out

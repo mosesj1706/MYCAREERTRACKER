@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import { clsx } from "clsx";
 import { Bot, Send, Square, Save, Trash2, User, BrainCircuit, History, CheckCircle2, XCircle } from "lucide-react";
-import { api, streamSSE, type Application, type Gap, type InterviewRecord, type MCQ } from "../lib/api";
+import { api, streamSSE, type Application, type Gap, type InterviewRecord, type MCQ, type Profile } from "../lib/api";
 import { Badge, Button, Card, CardHeader, Empty, PageHeader, Segmented, Select, Skeleton, Progress } from "../components/ui";
 import { useToast } from "../components/Toast";
 
@@ -27,7 +27,9 @@ function Mock() {
   const loc = useLocation() as { state?: { app_id?: number } };
   const apps = useQuery({ queryKey: ["applications"], queryFn: () => api.get<{ items: Application[] }>("/api/applications") });
   const [appId, setAppId] = useState<number>(loc.state?.app_id ?? 0);
-  const [mode, setMode] = useState<"mixed" | "technical" | "behavioral">("mixed");
+  const [mode, setMode] = useState<"mixed" | "technical" | "behavioral" | "project">("mixed");
+  const profile = useQuery({ queryKey: ["profile"], queryFn: () => api.get<Profile | null>("/api/profile") });
+  const [project, setProject] = useState<string>("");
   const [sid, setSid] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [streaming, setStreaming] = useState(false);
@@ -48,7 +50,8 @@ function Mock() {
     if (text?.trim().toLowerCase() === "end") setEnded(true);
   };
   const start = async () => {
-    const r = await api.post<{ session_id: string }>("/api/interview", { app_id: appId || null, mode });
+    if (mode === "project" && !project) { toast("error", "Pick a project to deep-dive."); return; }
+    const r = await api.post<{ session_id: string }>("/api/interview", { app_id: appId || null, mode, project: mode === "project" ? project : null });
     setSid(r.session_id); setMsgs([]); setEnded(false);
     await send(null, r.session_id);
   };
@@ -65,7 +68,15 @@ function Mock() {
               {apps.data?.items.map((a) => <option key={a.id} value={a.id}>#{a.id} · {a.title}{a.company ? " @ " + a.company : ""}</option>)}
             </Select></label>
           <label className="text-[13px]"><div className="text-muted mb-1.5">Mode</div>
-            <Select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)} className="w-full"><option value="mixed">Mixed — includes your risk flags</option><option value="technical">Technical deep-dive</option><option value="behavioral">Behavioral (STAR)</option></Select></label>
+            <Select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)} className="w-full"><option value="mixed">Mixed — includes your risk flags</option><option value="technical">Technical deep-dive</option><option value="behavioral">Behavioral (STAR)</option><option value="project">Project deep-dive — defend one of your repos</option></Select></label>
+          {mode === "project" && (
+            <label className="text-[13px] md:col-span-2"><div className="text-muted mb-1.5">Project</div>
+              <Select value={project} onChange={(e) => setProject(e.target.value)} className="w-full">
+                <option value="">Choose a project…</option>
+                {profile.data?.projects.map((p) => <option key={p.name} value={p.name}>{p.name}{p.url ? " · GitHub" : ""}</option>)}
+              </Select>
+              <div className="text-[12px] text-muted mt-1">Projects linked to a synced GitHub repo load the README and file tree, so questions are about your actual code.</div></label>
+          )}
         </div>
         <ul className="text-[13px] text-muted mt-4 space-y-1 list-disc pl-5">
           <li>One question at a time. Every answer gets a <b className="text-text">grade, a critique, and the pro answer</b> built from your real background.</li>
