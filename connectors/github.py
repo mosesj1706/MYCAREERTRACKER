@@ -16,6 +16,11 @@ from app.core.config import GITHUB_CACHE_PATH
 
 API = "https://api.github.com"
 README_MAX_CHARS = 3500
+KEY_FILE_MAX_CHARS = 1500
+KEY_FILE_LIMIT = 5
+# Files whose *contents* say what infrastructure/CI a repo really uses. Matched against full paths.
+KEY_FILE_PATTERNS = ("infra/", "terraform/", "cloudformation/", "cdk/", ".github/workflows/", "template.yaml", "template.yml",
+                     "serverless.yml", "samconfig.toml", "Dockerfile", "docker-compose", "Jenkinsfile", "deploy")
 
 
 class GitHubError(Exception):
@@ -35,7 +40,8 @@ class Repo(BaseModel):
     created_at: str
     pushed_at: str
     commits: int | None = None
-    top_files: list[str] = Field(default_factory=list, description="Top-level file/dir names")
+    top_files: list[str] = Field(default_factory=list, description="File tree, up to three levels deep")
+    key_files: dict[str, str] = Field(default_factory=dict, description="path -> head of infra/CI files, so IaC is judged from content")
     readme: str | None = None
 
     @property
@@ -52,9 +58,11 @@ class Repo(BaseModel):
             f"languages: {langs or self.primary_language or '-'}",
             f"topics: {', '.join(self.topics) or '-'}",
             f"created: {self.created_at[:10]} · last push: {self.pushed_at[:10]} · commits: {self.commits if self.commits is not None else '?'}",
-            f"top-level files: {', '.join(self.top_files) or '-'}",
+            f"files: {', '.join(self.top_files) or '-'}",
             f"has_code: {'yes' if self.has_code else 'NO - empty repo, description only'}",
         ]
+        for path, head in self.key_files.items():
+            lines += [f"--- {path} ---", head]
         if self.readme:
             lines += ["readme:", self.readme]
         return "\n".join(lines)
@@ -104,11 +112,26 @@ def _commit_count(c: httpx.Client, full_name: str) -> int | None:
     return len(r.json())
 
 
-def _top_files(c: httpx.Client, full_name: str) -> list[str]:
-    r = _get(c, f"/repos/{full_name}/contents")
+def _top_files(c: httpx.Client, full_name: str, default_branch: str) -> list[str]:
+    """Paths up to three levels deep, so infra/, migrations/, workflows/ etc. are visible."""
+    r = _get(c, f"/repos/{full_name}/git/trees/{default_branch}", recursive="1")
     if r.status_code != 200:
         return []
-    return [f["name"] + ("/" if f["type"] == "dir" else "") for f in r.json()][:40]
+    paths = [t["path"] + ("/" if t["type"] == "tree" else "") for t in r.json().get("tree", [])]
+    paths = [p for p in paths if p.count("/") <= 2 + p.endswith("/") and not p.startswith(("assets/", "public/", "docs/screenshots/"))]
+    return sorted(paths)[:150]
+
+
+def _key_files(c: httpx.Client, full_name: str, paths: list[str]) -> dict[str, str]:
+    picked = [p for p in paths if not p.endswith("/") and any(k in p for k in KEY_FILE_PATTERNS)
+              and p.rsplit(".", 1)[-1] in ("yaml", "yml", "tf", "json", "toml", "sh") or p.endswith(("Dockerfile", "Jenkinsfile"))]
+    out: dict[str, str] = {}
+    for path in picked[:KEY_FILE_LIMIT]:
+        r = _get(c, f"/repos/{full_name}/contents/{path}")
+        if r.status_code == 200 and r.json().get("encoding") == "base64":
+            text = base64.b64decode(r.json()["content"]).decode("utf-8", errors="replace")
+            out[path] = text[:KEY_FILE_MAX_CHARS] + ("\n…(truncated)" if len(text) > KEY_FILE_MAX_CHARS else "")
+    return out
 
 
 def _readme(c: httpx.Client, full_name: str) -> str | None:
@@ -146,7 +169,8 @@ def fetch(username: str, include_forks: bool = False) -> GitHubSnapshot:
                 langs = _get(c, f"/repos/{full}/languages")
                 repo.languages = langs.json() if langs.status_code == 200 else {}
                 repo.commits = _commit_count(c, full)
-                repo.top_files = _top_files(c, full)
+                repo.top_files = _top_files(c, full, raw.get("default_branch", "main"))
+                repo.key_files = _key_files(c, full, repo.top_files)
                 repo.readme = _readme(c, full)
             repos.append(repo)
     snap = GitHubSnapshot(username=username, fetched_at=datetime.now(timezone.utc).isoformat(timespec="seconds"), repos=repos)

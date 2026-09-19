@@ -51,7 +51,7 @@ export default function GitHubCard() {
             {withCode.map((r) => (
               <li key={r.full_name} className="text-[13px]">
                 <div className="flex items-baseline justify-between gap-2">
-                  <a href={r.url} target="_blank" rel="noreferrer" className="font-medium hover:underline truncate">{r.name}</a>
+                  <span className="inline-flex items-center gap-1.5 min-w-0"><a href={r.url} target="_blank" rel="noreferrer" className="font-medium hover:underline truncate">{r.name}</a>{r.private && <Badge>private</Badge>}</span>
                   <span className="num text-[11.5px] text-faint shrink-0">{r.commits ?? "?"} commits · {r.pushed_at.slice(0, 10)}</span>
                 </div>
                 {r.description && <div className="text-[12.5px] text-muted line-clamp-2">{r.description}</div>}

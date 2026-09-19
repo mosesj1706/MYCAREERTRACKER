@@ -23,7 +23,11 @@ Rules:
   fitting category.
 - evidence strings are one sentence each, concrete, and start with the repo name, e.g.
   "mixing-studio-platform: Next.js + Prisma booking platform with SQLite, 33 commits".
-- Projects: one entry per repo with code. If a profile project already describes the same work
+- Some repos include the head of their infra/CI files (marked "--- path ---"). Judge cloud and IaC
+  skills from that content: a CloudFormation template proves CloudFormation and the AWS services it
+  declares; a workflow file proves GitHub Actions. Do not claim "no AWS code" when such a file exists.
+- Projects: one entry per repo with substantial code. Skip tutorial/sample/practice repos (one or
+  two commits, no README, names like "Sample", "tutorial", "-master" copies) - they are not portfolio. If a profile project already describes the same work
   (same name or URL), reuse its name so it can be merged; add the URL. Description in 1-2 plain
   sentences from the README; technologies as canonical skill names; outcomes only if the README
   states a result.
