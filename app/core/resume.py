@@ -15,6 +15,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import HRFlowable, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.core.models import Profile, TailoredOutput
+from app.core.text import plain
 from connectors import github
 
 INK = colors.HexColor("#111318")
@@ -39,7 +40,7 @@ CATEGORY_ORDER = ["cloud", "data_engineering", "programming", "ml_ai", "database
 
 
 def _esc(s: str) -> str:
-    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return plain(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def _month(ym: str | None) -> str:
@@ -65,8 +66,10 @@ def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_titl
     private_urls = {r.url.lower().rstrip("/") for r in snap.repos if r.private} if snap else set()
 
     buf = BytesIO()
+    # Document properties read like a file the candidate saved themselves: no library name, no "(unspecified)".
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=13 * mm, bottomMargin=13 * mm,
-                            title=f"{p.personal_info.name} - Resume", author=p.personal_info.name)
+                            title=f"{p.personal_info.name} - Resume", author=p.personal_info.name, subject="Resume",
+                            creator=p.personal_info.name, producer=p.personal_info.name)
     f = []
 
     # Header
@@ -136,4 +139,19 @@ def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_titl
         f.append(Paragraph(f"{_esc(c.name)}{' · ' + _esc(c.issuer) if c.issuer else ''}{' · ' + str(c.year) if c.year else ''}{status}", S["body"]))
 
     doc.build(f)
-    return buf.getvalue()
+    return _strip_library_marks(buf.getvalue())
+
+
+_HEADER_MARK = b" ReportLab Generated PDF document (opensource)"
+_TRAILER_MARK = b"% ReportLab generated PDF document -- digest (opensource)\n"
+
+
+def _strip_library_marks(pdf: bytes) -> bytes:
+    """Remove reportlab's two hard-coded comment lines. Neither is visible in a viewer, but both show
+    up in `strings` and in some ATS parsers' "producer" detection.
+
+    The header comment precedes every object, so it is overwritten with spaces of the same length to
+    keep the xref offsets valid. The trailer comment comes after the xref table, so it can be dropped.
+    """
+    pdf = pdf.replace(_HEADER_MARK, b" " * len(_HEADER_MARK), 1)
+    return pdf.replace(_TRAILER_MARK, b"", 1)

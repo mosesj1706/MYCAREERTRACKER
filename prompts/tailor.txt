@@ -23,3 +23,5 @@ Rules:
 - Do not claim the candidate is "currently building" or "learning" anything unless the profile lists that
   skill with proficiency "learning" or a certification "in_progress". The fit assessment's suggestions
   are plans, not facts.
+
+<<voice>>

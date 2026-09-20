@@ -2,6 +2,7 @@
 from app.core import llm
 from app.core.config import load_prompt
 from app.core.models import JobAnalysis, MatchResult, Profile, TailoredOutput
+from app.core.text import plain_model
 
 
 def profile_block(profile: Profile) -> str:
@@ -28,8 +29,9 @@ def tailor(profile: Profile, job: JobAnalysis, result: MatchResult, jd_text: str
         f"<fit_assessment score={result.score()}>\n{result.model_dump_json(indent=1)}\n</fit_assessment>"
     )
     system = load_prompt("tailor").format(years=profile.total_experience_years())
-    return llm.extract(TailoredOutput, user=user, system=system, cached=profile_block(profile),
-                       effort="medium", max_tokens=16000, feature="tailor")
+    out = llm.extract(TailoredOutput, user=user, system=system, cached=profile_block(profile),
+                      effort="medium", max_tokens=16000, feature="tailor")
+    return plain_model(out)  # this text lands on the resume as written
 
 
 class ResumeMatcher:

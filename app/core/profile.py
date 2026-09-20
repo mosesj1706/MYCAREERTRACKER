@@ -5,6 +5,7 @@ from pathlib import Path
 from app.core import llm
 from app.core.config import PROFILE_PATH, load_prompt
 from app.core.models import GitHubMerge, LinkedInCopy, Profile, Skill
+from app.core.text import plain, plain_model
 from connectors.github import GitHubSnapshot
 from connectors.resume_pdf import extract_text
 
@@ -13,7 +14,8 @@ PROFICIENCY_RANK = {"learning": 0, "familiar": 1, "hands_on": 2, "expert": 3}
 
 def build_from_text(resume_text: str, target_role: str) -> Profile:
     system = load_prompt("profile_builder").format(target_role=target_role, today=date.today().isoformat())
-    return llm.extract(Profile, user=f"<resume>\n{resume_text}\n</resume>", system=system, effort="high", feature="profile_build")
+    p = llm.extract(Profile, user=f"<resume>\n{resume_text}\n</resume>", system=system, effort="high", feature="profile_build")
+    return plain_model(p)
 
 
 def build_from_pdf(pdf_path: str | Path, target_role: str) -> Profile:
@@ -48,7 +50,7 @@ def propose_github_merge(profile: Profile, snap: GitHubSnapshot) -> GitHubMerge:
     repos = "\n\n".join(r.digest() for r in snap.repos)
     user = (f"<current_skills>\n{skills}\n</current_skills>\n\n<current_projects>\n{projects}\n</current_projects>\n\n"
             f"<repositories owner=\"{snap.username}\">\n{repos}\n</repositories>")
-    return llm.extract(GitHubMerge, user=user, system=system, effort="high", feature="github_merge")
+    return plain_model(llm.extract(GitHubMerge, user=user, system=system, effort="high", feature="github_merge"))
 
 
 def apply_github_merge(profile: Profile, merge: GitHubMerge, snap: GitHubSnapshot) -> Profile:
@@ -109,7 +111,8 @@ def _month(ym: str | None) -> str:
 
 
 def _clip(text: str, limit: int = LINKEDIN_MAX) -> str:
-    return text if len(text) <= limit else text[: limit - 1].rsplit("\n", 1)[0] + "…"
+    text = plain(text)
+    return text if len(text) <= limit else text[: limit - 4].rsplit("\n", 1)[0] + "..."
 
 
 def linkedin_sections(profile: Profile) -> list[dict]:
@@ -118,7 +121,7 @@ def linkedin_sections(profile: Profile) -> list[dict]:
     for e in profile.experience:
         kind = {"freelance": "Self-employed", "contractor": "Full-time (contract)", "full-time": "Full-time"}.get((e.employment_type or "").lower(), e.employment_type or "")
         head = f"Title: {e.title}\nCompany: {e.company}\nEmployment type: {kind}\nDates: {_month(e.start)} - {_month(e.end)}\nLocation: {e.location or ''}"
-        desc = "\n".join(f"• {b}" for b in e.bullets)
+        desc = "\n".join(f"- {plain(b)}" for b in e.bullets)
         out.append({"section": "Experience", "label": f"{e.title} · {e.company}", "fields": head, "text": _clip(desc)})
     guvi = next((ed for ed in profile.education if "GUVI" in ed.institution), None)
     if guvi:
@@ -137,5 +140,6 @@ def linkedin_sections(profile: Profile) -> list[dict]:
 
 def linkedin_copy(profile: Profile) -> LinkedInCopy:
     system = load_prompt("linkedin_writer").format(target_role=profile.target.primary_role)
-    return llm.extract(LinkedInCopy, user=f"<candidate_profile>\n{profile.model_dump_json(indent=1)}\n</candidate_profile>", system=system,
-                       effort="low", feature="linkedin", tier="basic")
+    out = llm.extract(LinkedInCopy, user=f"<candidate_profile>\n{profile.model_dump_json(indent=1)}\n</candidate_profile>", system=system,
+                      effort="low", feature="linkedin", tier="basic")
+    return plain_model(out)

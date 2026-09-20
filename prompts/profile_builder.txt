@@ -16,3 +16,5 @@ Rules:
 - risk_flags: list concrete things a recruiter for the target role would probe. Look for employment
   gaps (today is {today}), mismatch between the resume's stated goal and the target role, skills
   claimed without evidence, missing certifications the role usually expects.
+
+<<voice>>

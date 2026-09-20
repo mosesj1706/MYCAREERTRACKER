@@ -11,3 +11,5 @@ Rules:
   toward (AWS data + AI) and the certification in progress. End with a one-line "open to" statement.
 - Honest about the career break: one clause, framed as the data science program.
 - Return JSON with exactly two keys: "headline" and "about".
+
+<<voice>>

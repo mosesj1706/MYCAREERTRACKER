@@ -32,3 +32,5 @@ Rules:
   sentences from the README; technologies as canonical skill names; outcomes only if the README
   states a result.
 - Do not restate resume evidence. Only what GitHub adds.
+
+<<voice>>

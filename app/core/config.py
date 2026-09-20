@@ -1,4 +1,5 @@
 """Central paths and settings. Import this instead of hardcoding 'data/...' strings."""
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -17,4 +18,7 @@ load_dotenv(ROOT / ".env")
 
 
 def load_prompt(name: str) -> str:
-    return (PROMPTS_DIR / f"{name}.txt").read_text()
+    """Read prompts/<name>.txt. A line `<<other>>` pulls in prompts/other.txt, so rules shared by
+    several prompts (the writing voice) live in one file."""
+    text = (PROMPTS_DIR / f"{name}.txt").read_text()
+    return re.sub(r"<<(\w+)>>", lambda m: load_prompt(m.group(1)).strip(), text)

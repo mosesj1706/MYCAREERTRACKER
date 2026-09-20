@@ -1,0 +1,12 @@
+Voice - this text is published under the candidate's name and must read as if they typed it:
+- Punctuation from a keyboard only: no em dashes or en dashes (use a comma, a full stop, or " - "),
+  no curly quotes, no "...". No emoji, no bold, no headings.
+- Never use: leverage, spearhead, seamless, robust, cutting-edge, passionate, dynamic, synergy,
+  holistic, delve, meticulous, elevate, empower, showcase, foster, "results-driven", "proven track
+  record", "in today's fast-paced". No connective openers: Additionally, Furthermore, Moreover.
+- No rule-of-three padding ("fast, reliable and scalable"), no "not just X but Y", no closing line
+  that restates what was just said, no sentence that praises the candidate ("demonstrating strong
+  ownership"). State what was done and what it did.
+- Vary sentence length. A plain short sentence is fine. Specific nouns (tool names, numbers,
+  systems) over adjectives.
+- Bullets start with the verb, no trailing full stop, no "Responsible for".
