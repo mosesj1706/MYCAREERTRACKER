@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clsx } from "clsx";
-import { Download, FileUp, Flag, Link2, MapPin, Save, Sparkles } from "lucide-react";
+import { Plus, Download, FileUp, Flag, Link2, MapPin, Save, Sparkles } from "lucide-react";
 import { api, type Profile } from "../lib/api";
 import { Badge, Button, Card, CardHeader, Input, PageHeader, Skeleton, Textarea } from "../components/ui";
 import { useToast } from "../components/Toast";
 import GitHubCard from "../components/GitHubCard";
 import LinkedInDrawer from "../components/LinkedInDrawer";
+import AddToProfile from "../components/AddToProfile";
 import { TellCheck } from "../components/TellCheck";
 
 const PROF: Record<string, { label: string; tone: "success" | "accent" | "warn" | "neutral" }> = {
@@ -20,6 +21,7 @@ export default function ProfilePage() {
   const [file, setFile] = useState<File | null>(null);
   const [json, setJson] = useState<string | null>(null);
   const [linkedin, setLinkedin] = useState(false);
+  const [adding, setAdding] = useState(false);
   const build = useMutation({
     mutationFn: async () => { const fd = new FormData(); if (file) fd.append("file", file); const r = await fetch(`/api/profile/build?target_role=${encodeURIComponent(role)}`, { method: "POST", body: fd }); if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText); return r.json() as Promise<Profile>; },
     onSuccess: (p) => { qc.setQueryData(["profile"], p); qc.invalidateQueries(); toast("success", "Profile built."); }, onError: (e) => toast("error", (e as Error).message),
@@ -46,8 +48,9 @@ export default function ProfilePage() {
   return (
     <div>
       <PageHeader title="Profile" subtitle={`Updated ${p.updated_at} · ${p.hands_on} hands-on · ${p.learning} learning · ${p.years} yrs`}
-        actions={<div className="flex gap-2"><a href="/api/resume.pdf" download><Button variant="secondary"><Download className="size-4" /> Resume PDF</Button></a><Button variant="secondary" onClick={() => setLinkedin(true)}><Link2 className="size-4" /> LinkedIn text</Button><Button variant="secondary" onClick={() => setJson(json === null ? JSON.stringify(p, null, 2) : null)}>{json === null ? "Edit as JSON" : "Close editor"}</Button></div>} />
+        actions={<div className="flex gap-2"><Button variant="primary" onClick={() => setAdding(true)}><Plus className="size-4" /> Add to profile</Button><a href="/api/resume.pdf" download><Button variant="secondary"><Download className="size-4" /> Resume PDF</Button></a><Button variant="secondary" onClick={() => setLinkedin(true)}><Link2 className="size-4" /> LinkedIn text</Button><Button variant="secondary" onClick={() => setJson(json === null ? JSON.stringify(p, null, 2) : null)}>{json === null ? "Edit as JSON" : "Close editor"}</Button></div>} />
       <LinkedInDrawer open={linkedin} onClose={() => setLinkedin(false)} />
+      <AddToProfile open={adding} onClose={() => setAdding(false)} />
       <details className="mb-4"><summary className="text-[13px] text-muted cursor-pointer hover:text-text">Rebuild from a resume</summary><div className="mt-3">{Builder}</div></details>
       {json !== null && (
         <Card className="p-4 mb-4"><Textarea rows={22} value={json} onChange={(e) => setJson(e.target.value)} className="num text-[12.5px]" /><div className="flex justify-end mt-2"><Button variant="primary" loading={save.isPending} onClick={() => { try { save.mutate(JSON.parse(json)); } catch { toast("error", "Invalid JSON"); } }}><Save className="size-4" /> Save</Button></div></Card>
@@ -100,6 +103,7 @@ export default function ProfilePage() {
             <div className="px-5 pb-5 space-y-2 text-[13px]">
               {p.education.map((e, i) => <div key={i}><div className="font-medium">{e.degree}{e.field ? ` — ${e.field}` : ""}</div><div className="text-muted">{e.institution}{e.end_year ? ` · ${e.end_year}` : ""}</div></div>)}
               {p.certifications.map((c, i) => <div key={i} className="flex items-center justify-between gap-2"><span>{c.name}</span><Badge tone={c.status === "completed" ? "success" : "warn"}>{c.status.replace("_", " ")}</Badge></div>)}
+              {(p.courses ?? []).map((c, i) => <div key={i}><div className="flex items-center justify-between gap-2"><span>{c.name}</span><Badge>course{c.year ? ` · ${c.year}` : ""}</Badge></div>{c.provider && <div className="text-muted">{c.provider}{c.project ? ` · ${c.project}` : ""}</div>}</div>)}
             </div>
           </Card>
         </div>

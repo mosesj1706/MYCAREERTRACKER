@@ -137,6 +137,9 @@ def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_titl
             continue
         status = "" if c.status == "completed" else f" ({c.status.replace('_', ' ')})"
         f.append(Paragraph(f"{_esc(c.name)}{' · ' + _esc(c.issuer) if c.issuer else ''}{' · ' + str(c.year) if c.year else ''}{status}", S["body"]))
+    for c in p.courses:
+        f.append(Paragraph(f"{_esc(c.name)}{' · ' + _esc(c.provider) if c.provider else ''}{' · ' + str(c.year) if c.year else ''}"
+                           f"{' · ' + _esc(c.project) if c.project else ''}", S["body"]))
 
     doc.build(f)
     return _strip_library_marks(buf.getvalue())

@@ -59,6 +59,14 @@ class Certification(BaseModel):
     year: int | None = None
 
 
+class Course(BaseModel):
+    name: str
+    provider: str | None = None
+    year: int | None = None
+    url: str | None = None
+    project: str | None = Field(default=None, description="What was built during the course, if anything")
+
+
 class PersonalInfo(BaseModel):
     name: str
     headline: str | None = None
@@ -84,6 +92,7 @@ class Profile(BaseModel):
     projects: list[Project]
     education: list[Education]
     certifications: list[Certification]
+    courses: list[Course] = Field(default_factory=list)
     risk_flags: list[str] = Field(
         default_factory=list,
         description="Things a recruiter will probe: employment gaps, title/target mismatch, skills claimed without evidence",
@@ -122,6 +131,42 @@ class GitHubMerge(BaseModel):
     skills: list[SkillEvidence] = Field(description="Skills the repositories prove, existing or new")
     projects: list[Project] = Field(description="One per repository that contains code")
     notes: list[str] = Field(default_factory=list, description="Anything notable a recruiter would see on this GitHub, good or bad")
+
+
+# ---------------------------------------------------------------------------
+# Adding to the profile: a certification, course, project or job
+# ---------------------------------------------------------------------------
+
+AdditionKind = Literal["certification", "course", "project", "experience"]
+
+
+class ProfileAddition(BaseModel):
+    """What the user types in. The model turns it into a ProfileMerge; apply_addition() writes it."""
+    kind: AdditionKind
+    name: str = Field(description="Certification / course / project name, or job title")
+    org: str | None = Field(default=None, description="Issuer, provider, or company")
+    url: str | None = None
+    date: str | None = Field(default=None, description="YYYY-MM when completed or started")
+    end: str | None = Field(default=None, description="YYYY-MM for a job that has ended")
+    status: Literal["completed", "in_progress", "planned"] = "completed"
+    description: str = Field(default="", description="What it covered / what you built / what you did, in the user's words")
+
+
+class AdditionSkill(BaseModel):
+    name: str = Field(description="Canonical skill name; reuse the profile's existing name when the skill exists")
+    category: SkillCategory
+    proficiency: Literal["learning", "familiar", "hands_on"] = Field(description="What this addition proves; never 'expert'")
+    evidence: str = Field(description="One sentence, starting with the addition's name, saying what proves it")
+
+
+class ProfileMerge(BaseModel):
+    skills: list[AdditionSkill] = Field(description="Skills this addition proves or updates")
+    certification: Certification | None = None
+    course: Course | None = None
+    project: Project | None = None
+    experience: Experience | None = None
+    resolved_risk_flags: list[str] = Field(default_factory=list, description="Entries copied verbatim from the profile's risk_flags that this addition settles")
+    notes: list[str] = Field(default_factory=list, description="What this addition does NOT prove and how a recruiter will see it")
 
 
 class LinkedInCopy(BaseModel):

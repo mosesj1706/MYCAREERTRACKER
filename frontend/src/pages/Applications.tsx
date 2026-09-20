@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { clsx } from "clsx";
-import { ExternalLink, GripVertical, RefreshCw, Trash2, Target, ChevronRight, Download } from "lucide-react";
+import { ExternalLink, GripVertical, RefreshCw, Trash2, Target, ChevronRight, Download, Wand2 } from "lucide-react";
 import { api, type Application } from "../lib/api";
 import { Badge, Button, Empty, Gauge, PageHeader, Textarea, Input } from "../components/ui";
 import { Drawer } from "../components/Drawer";
@@ -116,6 +116,7 @@ function Detail({ a, onClose }: { a: Application; onClose: () => void }) {
   const save = useMutation({ mutationFn: () => api.patch(`/api/applications/${a.id}`, { notes, url: url || null }), onSuccess: () => { inval(); toast("success", "Saved."); } });
   const rescore = useMutation({ mutationFn: () => api.post<Application>(`/api/applications/${a.id}/rescore`), onSuccess: (r) => { inval(); toast("success", `Re-scored: ${Math.round(a.match_score)}% → ${Math.round(r.match_score)}%`); }, onError: (e) => toast("error", (e as Error).message) });
   const del = useMutation({ mutationFn: () => api.del(`/api/applications/${a.id}`), onSuccess: () => { inval(); onClose(); toast("info", "Deleted."); } });
+  const tailorIt = useMutation({ mutationFn: () => api.post<Application>(`/api/applications/${a.id}/tailor`), onSuccess: () => { inval(); toast("success", a.tailored ? "Re-tailored against the current profile." : "Tailored: summary, bullets and cover letter are below; the resume PDF is ready."); }, onError: (e) => toast("error", (e as Error).message) });
   const counts = { strong: a.match.matches.filter((m) => m.strength === "strong").length, partial: a.match.matches.filter((m) => m.strength === "partial").length, none: a.match.matches.filter((m) => m.strength === "none").length };
   return (
     <div className="space-y-5">
@@ -132,6 +133,7 @@ function Detail({ a, onClose }: { a: Application; onClose: () => void }) {
       <div className="grid grid-cols-2 gap-2">
         <Button onClick={() => rescore.mutate()} loading={rescore.isPending}><RefreshCw className="size-4" /> Re-score with current profile</Button>
         <Link to="/interview" state={{ app_id: a.id }}><Button className="w-full">Practice for this job</Button></Link>
+        <Button onClick={() => tailorIt.mutate()} loading={tailorIt.isPending} title="Rewrites the summary and bullets for this JD and drafts the cover letter. One model call, about a minute."><Wand2 className="size-4" /> {a.tailored ? "Re-tailor for this job" : "Tailor resume for this job"}</Button>
         {a.tailored && <a href={`/api/applications/${a.id}/resume.pdf`} download><Button className="w-full"><Download className="size-4" /> Tailored resume PDF</Button></a>}
       </div>
       <div className="space-y-2">

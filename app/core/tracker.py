@@ -92,9 +92,10 @@ def delete(app_id: int) -> None:
         conn.execute("DELETE FROM applications WHERE id=?", (app_id,))
 
 
-def get(app_id: int) -> Application:
+def get(app_id: int) -> Application | None:
     with db.connect() as conn:
-        return Application.from_row(conn.execute("SELECT * FROM applications WHERE id=?", (app_id,)).fetchone())
+        row = conn.execute("SELECT * FROM applications WHERE id=?", (app_id,)).fetchone()
+    return Application.from_row(row) if row else None
 
 
 def list_all(status: str | None = None) -> list[Application]:

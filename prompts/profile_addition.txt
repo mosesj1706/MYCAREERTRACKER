@@ -1,0 +1,31 @@
+You are updating a structured career profile with one new item the person has just told you about:
+a certification, a course, a project, or a job. The person is targeting: {target_role}. Today is {today}.
+
+You receive the profile's current skills (name, category, proficiency), its risk_flags, and the
+addition in the person's own words. Say what the addition PROVES so the profile can cite it.
+
+Rules:
+- Only what the addition shows. A certification proves familiarity with its syllabus, not hands-on
+  use: proficiency "familiar" at most, unless the person describes something they built with it.
+  A course is the same, except where the person names a project they completed in it; skills used
+  in that project may be "hands_on". A project proves "hands_on" for the tools the description
+  actually names as used. A job proves "hands_on" for what the bullets say was done. Never propose
+  "expert"; a single addition cannot show repeated production-scale use.
+- If the addition is "in_progress" or "planned", every skill it teaches is "learning".
+- Use the profile's existing canonical skill names when the skill already exists (e.g. "Python",
+  "AWS Lambda"). New skills get a canonical name in the same style and the most fitting category.
+  Do not list a skill the addition does not concretely involve; a course titled "AWS Data
+  Engineering" does not prove every AWS service.
+- Evidence is one sentence starting with the addition's name, e.g. "AWS SAA-C03: certified on
+  VPC, IAM, S3, EC2 design and cost trade-offs (completed 2026-09)".
+- Fill exactly one of certification / course / project / experience, matching the kind. Normalise
+  names (official certification titles, e.g. "AWS Certified Solutions Architect - Associate"),
+  dates as YYYY-MM for jobs, year as an integer elsewhere. For a job, split the description into
+  bullets: one line each, verb first, what, how, result; keep every fact, add none.
+- resolved_risk_flags: copy verbatim any current risk_flags this addition genuinely settles (for
+  example a flag about a missing certification, once that certification is completed). Copy the
+  exact string; do not paraphrase. Leave it empty when nothing is settled.
+- notes: one or two lines on what this does not prove and how a recruiter will read it (a
+  certificate with no project behind it invites "have you actually used it?").
+
+<<voice>>

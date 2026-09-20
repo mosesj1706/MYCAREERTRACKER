@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from app.core import analytics, detector, interview, profile as profile_store, resume, tells, tracker, usage
 from app.core.config import DATA_DIR, ROOT
 from app.core.matcher import analyze_jd, match, tailor
-from app.core.models import JobAnalysis, LearningPlan, MatchResult, MCQ, Profile, TailoredOutput
+from app.core.models import JobAnalysis, LearningPlan, MatchResult, MCQ, Profile, ProfileAddition, ProfileMerge, TailoredOutput
 from connectors import github
 from learning_engine import planner
 
@@ -29,6 +29,13 @@ def _profile() -> Profile:
     if not profile_store.exists():
         raise HTTPException(404, "No profile yet - build one from a resume first.")
     return profile_store.load()
+
+
+def _application(app_id: int) -> tracker.Application:
+    a = tracker.get(app_id)
+    if a is None:
+        raise HTTPException(404, "Application not found")
+    return a
 
 
 def _app_dict(a: tracker.Application) -> dict:
@@ -72,6 +79,29 @@ async def build_profile(target_role: str, file: UploadFile | None = None):
     return get_profile()
 
 
+@app.post("/api/profile/additions/propose")
+def profile_addition_propose(body: ProfileAddition):
+    """A certification, course, project or job -> what it proves. Nothing is written."""
+    if not body.name.strip():
+        raise HTTPException(400, "Give it a name.")
+    return profile_store.propose_addition(_profile(), body).model_dump()
+
+
+class AdditionApply(BaseModel):
+    addition: ProfileAddition
+    merge: ProfileMerge
+
+
+@app.post("/api/profile/additions/apply")
+def profile_addition_apply(body: AdditionApply):
+    """Write a reviewed proposal into the profile. Returns the skill changes and how many tracked
+    applications could be re-scored against the new profile."""
+    p, changes = profile_store.apply_addition(_profile(), body.addition, body.merge)
+    profile_store.save(p)
+    return {"profile": get_profile(), "changes": changes, "resolved_risk_flags": body.merge.resolved_risk_flags,
+            "applications": len([a for a in tracker.list_all() if a.status not in ("rejected",)])}
+
+
 @app.get("/api/profile/linkedin")
 def profile_linkedin(write: bool = False):
     """Copy-paste blocks for LinkedIn. `write=true` also drafts headline + About with the model."""
@@ -96,9 +126,7 @@ def resume_pdf():
 @app.get("/api/applications/{app_id}/resume.pdf")
 def application_resume_pdf(app_id: int):
     """Resume tailored to one tracked application (needs its tailored output)."""
-    a = tracker.get(app_id)
-    if a is None:
-        raise HTTPException(404, "Application not found")
+    a = _application(app_id)
     if a.tailored is None:
         raise HTTPException(400, "This application has no tailored output yet - run Tailor first.")
     p = _profile()
@@ -190,9 +218,7 @@ def profile_tells_apply(body: TellApply):
 
 @app.get("/api/applications/{app_id}/tells")
 def application_tells(app_id: int, detector_on: bool = False):
-    a = tracker.get(app_id)
-    if a is None:
-        raise HTTPException(404, "Application not found")
+    a = _application(app_id)
     if a.tailored is None:
         raise HTTPException(400, "This application has no tailored output yet - run Tailor first.")
     t = a.tailored
@@ -204,9 +230,9 @@ def application_tells(app_id: int, detector_on: bool = False):
 
 @app.post("/api/applications/{app_id}/tells/apply")
 def application_tells_apply(app_id: int, body: TellApply):
-    a = tracker.get(app_id)
-    if a is None or a.tailored is None:
-        raise HTTPException(404, "Application or tailored output not found")
+    a = _application(app_id)
+    if a.tailored is None:
+        raise HTTPException(400, "This application has no tailored output yet - run Tailor first.")
     t = a.tailored
     if body.field == "summary":
         t.summary = body.text.strip()
@@ -322,7 +348,7 @@ def track(body: TrackIn):
 
 @app.get("/api/applications/{app_id}")
 def get_application(app_id: int):
-    return _app_dict(tracker.get(app_id))
+    return _app_dict(_application(app_id))
 
 
 class AppPatch(BaseModel):
@@ -335,7 +361,10 @@ class AppPatch(BaseModel):
 
 @app.patch("/api/applications/{app_id}")
 def patch_application(app_id: int, body: AppPatch):
+    _application(app_id)
     if body.status:
+        if body.status not in tracker.STATUSES:
+            raise HTTPException(400, f"status must be one of {', '.join(tracker.STATUSES)}")
         tracker.set_status(app_id, body.status)
     fields = {k: v for k, v in body.model_dump().items() if k != "status" and v is not None}
     if fields:
@@ -345,13 +374,38 @@ def patch_application(app_id: int, body: AppPatch):
 
 @app.delete("/api/applications/{app_id}")
 def delete_application(app_id: int):
+    _application(app_id)
     tracker.delete(app_id)
     return {"ok": True}
 
 
 @app.post("/api/applications/{app_id}/rescore")
 def rescore(app_id: int):
+    _application(app_id)
     tracker.rescore(app_id, _profile())
+    return _app_dict(tracker.get(app_id))
+
+
+@app.post("/api/applications/rescore-all")
+def rescore_all():
+    """Re-judge every open application against the current profile. One model call each."""
+    p = _profile()
+    out = []
+    for a in tracker.list_all():
+        if a.status == "rejected":
+            continue
+        before = a.match_score
+        after = tracker.rescore(a.id, p)
+        out.append({"id": a.id, "title": a.title, "company": a.company, "before": round(before), "after": round(after)})
+    return out
+
+
+@app.post("/api/applications/{app_id}/tailor")
+def application_tailor(app_id: int):
+    """Tailor (or re-tailor) a tracked application against the current profile."""
+    a = _application(app_id)
+    out = tailor(_profile(), a.job, a.match, a.jd_text)
+    tracker.save_tailored(app_id, out)
     return _app_dict(tracker.get(app_id))
 
 
@@ -374,7 +428,7 @@ class InterviewStart(BaseModel):
 def interview_start(body: InterviewStart):
     try:
         sess = interview.InterviewSession(_profile(), mode=body.mode, project=body.project,
-                                          application=tracker.get(body.app_id) if body.app_id else None)
+                                          application=_application(body.app_id) if body.app_id else None)
     except ValueError as e:
         raise HTTPException(400, str(e))
     sid = uuid.uuid4().hex

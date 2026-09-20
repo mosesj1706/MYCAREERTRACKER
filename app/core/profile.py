@@ -4,7 +4,7 @@ from pathlib import Path
 
 from app.core import llm
 from app.core.config import PROFILE_PATH, load_prompt
-from app.core.models import GitHubMerge, LinkedInCopy, Profile, Skill
+from app.core.models import GitHubMerge, LinkedInCopy, Profile, ProfileAddition, ProfileMerge, Skill
 from app.core.text import plain, plain_model
 from connectors.github import GitHubSnapshot
 from connectors.resume_pdf import extract_text
@@ -99,6 +99,82 @@ def apply_github_merge(profile: Profile, merge: GitHubMerge, snap: GitHubSnapsho
     return profile
 
 
+# ----------------------------------------------------------------------------- additions
+def propose_addition(profile: Profile, add: ProfileAddition) -> ProfileMerge:
+    """Ask the model what one new certification/course/project/job proves. Nothing is applied here."""
+    system = load_prompt("profile_addition").format(target_role=profile.target.primary_role, today=date.today().isoformat())
+    skills = "\n".join(f"- {s.name} [{s.category}] {s.proficiency}" for s in profile.skills)
+    flags = "\n".join(f"- {f}" for f in profile.risk_flags)
+    user = (f"<current_skills>\n{skills}\n</current_skills>\n\n<risk_flags>\n{flags}\n</risk_flags>\n\n"
+            f"<addition>\n{add.model_dump_json(indent=1)}\n</addition>")
+    return plain_model(llm.extract(ProfileMerge, user=user, system=system, effort="medium", feature="profile_addition"))
+
+
+def apply_addition(profile: Profile, add: ProfileAddition, merge: ProfileMerge) -> tuple[Profile, list[dict]]:
+    """Deterministic rules, same as the GitHub merge: evidence is appended, proficiency only rises,
+    entries are upserted by name, nothing is removed except risk flags the addition resolves.
+    A certification or course alone is capped at 'familiar' whatever the model said, unless the
+    user described a project. Returns the profile and the list of skill changes."""
+    cap = "familiar" if add.kind in ("certification", "course") and not (merge.course and merge.course.project) else "hands_on"
+    if add.status != "completed":
+        cap = "learning"
+    by_name = {s.name.lower(): s for s in profile.skills}
+    changes: list[dict] = []
+    for sk in merge.skills:
+        prof = sk.proficiency if PROFICIENCY_RANK[sk.proficiency] <= PROFICIENCY_RANK[cap] else cap
+        cur = by_name.get(sk.name.lower())
+        if cur is None:
+            cur = Skill(name=sk.name, category=sk.category, proficiency=prof, evidence=[])
+            profile.skills.append(cur)
+            by_name[sk.name.lower()] = cur
+            changes.append({"skill": cur.name, "from": None, "to": prof})
+        elif PROFICIENCY_RANK[prof] > PROFICIENCY_RANK[cur.proficiency]:
+            changes.append({"skill": cur.name, "from": cur.proficiency, "to": prof})
+            cur.proficiency = prof
+        if sk.evidence and sk.evidence not in cur.evidence:
+            cur.evidence.append(sk.evidence)
+
+    if merge.certification:
+        c = merge.certification
+        existing = next((x for x in profile.certifications if x.name.lower() == c.name.lower()), None)
+        if existing:
+            existing.status, existing.year, existing.issuer = c.status, c.year or existing.year, c.issuer or existing.issuer
+        else:
+            profile.certifications.append(c)
+    if merge.course:
+        c = merge.course
+        existing = next((x for x in profile.courses if x.name.lower() == c.name.lower()), None)
+        if existing:
+            existing.provider, existing.year, existing.url, existing.project = c.provider or existing.provider, c.year or existing.year, c.url or existing.url, c.project or existing.project
+        else:
+            profile.courses.append(c)
+    if merge.project:
+        pr = merge.project
+        existing = next((x for x in profile.projects if x.name.lower() == pr.name.lower()
+                         or (x.url and pr.url and x.url.lower().rstrip("/") == pr.url.lower().rstrip("/"))), None)
+        if existing:
+            existing.description = pr.description or existing.description
+            existing.url = pr.url or existing.url
+            existing.technologies += [t for t in pr.technologies if t not in existing.technologies]
+            existing.outcomes += [o for o in pr.outcomes if o not in existing.outcomes]
+        else:
+            profile.projects.append(pr)
+    if merge.experience:
+        e = merge.experience
+        existing = next((x for x in profile.experience if x.company.lower() == e.company.lower() and x.title.lower() == e.title.lower()), None)
+        if existing:
+            existing.end = e.end
+            existing.bullets += [b for b in e.bullets if b not in existing.bullets]
+            existing.technologies += [t for t in e.technologies if t not in existing.technologies]
+        else:
+            profile.experience.insert(0, e)
+            profile.experience.sort(key=lambda x: x.start, reverse=True)
+
+    resolved = set(merge.resolved_risk_flags)
+    profile.risk_flags = [f for f in profile.risk_flags if f not in resolved]
+    return profile, changes
+
+
 # ----------------------------------------------------------------------------- LinkedIn export
 LINKEDIN_MAX = 2000  # LinkedIn's limit for a position or project description
 
@@ -131,6 +207,14 @@ def linkedin_sections(profile: Profile) -> list[dict]:
     for p in profile.projects:
         desc = p.description + ("\n\nOutcomes: " + "; ".join(p.outcomes) if p.outcomes else "") + "\n\nStack: " + ", ".join(p.technologies)
         out.append({"section": "Projects", "label": p.name, "fields": f"Name: {p.name}\nURL: {p.url or '(none)'}", "text": _clip(desc)})
+    for c in profile.certifications:
+        if c.status == "planned":
+            continue
+        fields = f"Name: {c.name}\nIssuing organization: {c.issuer or ''}\nIssue date: {c.year or ''}" + ("\n(in progress - add when passed)" if c.status == "in_progress" else "")
+        out.append({"section": "Licenses & certifications", "label": c.name, "fields": fields, "text": ""})
+    for c in profile.courses:
+        out.append({"section": "Courses", "label": c.name, "fields": f"Name: {c.name}\nAssociated with: {c.provider or ''}\nYear: {c.year or ''}",
+                    "text": plain(c.project) if c.project else ""})
     strong = [s.name for s in profile.skills if s.proficiency in ("hands_on", "expert")]
     soft = [s.name for s in profile.skills if s.proficiency == "familiar"]
     out.append({"section": "Skills", "label": "Add these (hands-on, evidenced)", "fields": f"{len(strong)} skills", "text": ", ".join(strong)})

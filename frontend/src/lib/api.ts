@@ -54,6 +54,7 @@ export interface Profile {
   summary: string; skills: Skill[]; experience: Experience[]; projects: Project[];
   education: { institution: string; degree: string; field?: string | null; start_year?: number | null; end_year?: number | null; grade?: string | null }[];
   certifications: { name: string; issuer?: string | null; status: string; year?: number | null }[];
+  courses: { name: string; provider?: string | null; year?: number | null; url?: string | null; project?: string | null }[];
   risk_flags: string[]; updated_at: string;
   years: number; hands_on: number; learning: number;
 }
