@@ -1,0 +1,12 @@
+# Hacker News comment 24684409, 2020-10-05, https://news.ycombinator.com/item?id=24684409
+
+Résumé/CV: 
+
+
+
+
+I'm a senior software engineer, experienced in a variety of languages and technology stacks. I'm looking for interesting and rewarding work on a remote-friendly (preferably "remote first") team, especially using Scala. I have experience in developing web applications using various UI stacks, but prefer backend development. I have experience as team lead, technical lead, and mentor. I am also a big proponent of automation, striving to make life easier for both developers and end-users.
+
+Coworkers and friends look to me for programming advice and assistance in solving complex problems. I relish challenging projects. I strive to write exceptionally clean code, along with suites of thorough unit and integration tests. I am pragmatic, and bear performance in mind, however. Multiple times I've profiled and analyzed code and design, and identified opportunities to speed up and/or reduce footprint by a factor of 1000x or more.
+
+I enjoy working on interesting and challenging problems, especially science-related ones, and on systems that impact large numbers of people. Contributing to open source projects would be a huge plus. I have experience working remotely, and with my background and abilities, I will be an asset to your team.

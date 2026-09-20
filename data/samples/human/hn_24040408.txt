@@ -1,0 +1,8 @@
+# Hacker News comment 24040408, 2020-08-03, https://news.ycombinator.com/item?id=24040408
+
+Résumé/CV: Email me!
+
+
+I'm currently working full time building the front-end web app for a SaaS product using Typescript with maximum strictness and React Hooks. I'm responsible for ensuring that the client app cannot crash at runtime when using data from our API. I also implement and maintain numerous customer-facing pages and features.
+
+I'm open to any role that will assist me as I continue learning; be it new tech, security, alternate languages, etc. Ideally I'm looking for a full stack role involving Application Security, but please don't hesitate to reach out if you have an opportunity with a relevant stack!

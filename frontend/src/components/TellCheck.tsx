@@ -53,7 +53,7 @@ export function TellCheck({ url, sections, compact }: { url?: string; sections?:
             <span className="text-[12px] font-medium text-muted">{s.label}</span>
             <div className="flex items-center gap-1.5">
               <Badge tone={tone(s.tells.score)}>{s.tells.label} · {s.tells.score}</Badge>
-              {s.detector && <span title={`Binoculars ${s.detector.score ?? "-"} over ${s.detector.words} words. Below 0.85 reads as generic model prose, above 0.95 as a person writing about specifics. Calibrated on this app's own text.`}>
+              {s.detector && <span title={`Binoculars ${s.detector.score ?? "-"} over ${s.detector.words} words. Measured on 40 pre-2022 human and 20 model self-descriptions: nothing human scored below 0.935, almost nothing model above 1.075. Between is borderline, which is where most text lands; the scan above is the better guide there.`}>
                 <Badge tone={bandTone[s.detector.band] ?? "neutral"} className="num">detector: {s.detector.band}{s.detector.score !== null && ` · ${s.detector.score.toFixed(2)}`}</Badge></span>}
             </div>
           </div>

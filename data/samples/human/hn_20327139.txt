@@ -1,0 +1,21 @@
+# Hacker News comment 20327139, 2019-07-01, https://news.ycombinator.com/item?id=20327139
+
+I'm an experienced and hands-on engineering and product leader. I push production code regularly and have led multiple high impact, productive teams at early-stage startups in both engineering and product capacities.
+
+Most recently, I was Co-founder and Head of Product and Engineering at a successful venture-funded startup. I now want to work on interesting projects with startups, mid-sized companies, or founders directly while I figure out my next adventure.
+
+Please reach out if I can help you in any of the following ways:
+
+- As a freelance/contract individual contributor. I am very proficient with Rails, JS, and React on modern web stacks. I've done some work with React Native as well and can pick it up fast.
+
+- As a part-time Product or Engineering leader. This would ideally work if you are a sales/business-focused founder who needs someone to manage and propel the ship on the product/tech side. At my last startup, I took a SaaS product from a back of napkin sketch to software with dozens of business customers and in the process we raised funding. I can help with talking to customers, working with designers, product planning, roadmapping, and delivery, or help you hire your first team of engineers.
+
+- As a software development partner. I'm putting together a small, remote, distributed team of talented engineers and would love to take on projects that fall in my sweet spot - building products from the ground up and iterating rapidly based on customer feedback.
+
+
+
+
+
+Skills: Engineering, Product Planning/Management/Design, Rapid Prototyping
+
+Full-time: No, looking for part-time contract/freelance/consulting opportunities

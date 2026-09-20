@@ -1,0 +1,8 @@
+# Hacker News comment 24653986, 2020-10-01, https://news.ycombinator.com/item?id=24653986
+
+Domain Experience: travel, real estate, education, foreign/online adversarial propaganda/disinfo (APD), gaming, sims, cryptocurrency/blockchain, leadgen auction engines, VPN
+
+
+
+
+decades of programming. solid computing system fundamentals. problem solving. brainstorming. prototyping. communication. technical team lead. software architect. SRE-ish. author of cheatsheet on Software Performance & Scalability. tech research, due diligence and consulting for US State Department. indie game engine creator since childhood. wrote & shipped a zombie apocalypse simulation a decade ago -- which was much more fun than coronavirus. in free time lately designing a sim to teach about democracy collapse risks, and FOSS contrib to Tailscale

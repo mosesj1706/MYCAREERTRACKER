@@ -1,0 +1,15 @@
+# Hacker News comment 24652127, 2020-10-01, https://news.ycombinator.com/item?id=24652127
+
+I am a product-minded, mid-level, frontend developer.
+
+I have a good eye and a detail-oriented personality for UX and design, and I am familiar with marketing tools -- I have a professional background as Growth Marketer before becoming a software developer.
+
+I have designed, built, and deployed complete applications. The most recent one is 
+
+I am building it solo, from concept, to design, to development (React on serverless architecture with FaunaDB).
+
+Other links that can showcase some of my professional skills:
+
+My newsletter with writing advice for developers: 
+
+My personal blog about my career transition from marketing to software development:

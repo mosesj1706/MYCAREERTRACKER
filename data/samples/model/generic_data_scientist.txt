@@ -1,0 +1,7 @@
+# claude-sonnet-5, generic prompt, Sep 2026
+
+Hi there! I'm a data scientist with a passion for turning messy, complex data into clear insights that drive real decisions. Over the past several years, I've worked across industries—from e-commerce to healthcare—building predictive models, designing A/B tests, and creating dashboards that stakeholders actually use. My toolkit includes Python, SQL, and R, along with hands-on experience in machine learning frameworks like scikit-learn, TensorFlow, and PyTorch. I enjoy the full lifecycle of a project: digging into raw data, engineering meaningful features, building and validating models, and communicating findings to both technical and non-technical audiences.
+
+What sets me apart is my curiosity and my focus on business impact—I don't just build models for the sake of accuracy, I aim to solve problems that matter. I'm equally comfortable working independently or collaborating with cross-functional teams, and I thrive in environments where I can keep learning.
+
+I'm currently open to full-time or contract opportunities, remote or hybrid. If you think I might be a fit for your team, I'd love to connect!

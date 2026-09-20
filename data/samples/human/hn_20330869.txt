@@ -1,0 +1,19 @@
+# Hacker News comment 20330869, 2019-07-01, https://news.ycombinator.com/item?id=20330869
+
+With a background in games and computer graphics, I've recently been working on developer tools, CAD software, data visualization, mobile and web development.
+
+I've gotten to like building stuff with web technologies and have been specializing in building tools with three.js for a few years now (web-based CAD tool, 3D printer simulation/config app, hard drive usage visualization).
+
+Most of my professional work has been with startups, building ambitious new software from the ground up. I've got a good eye for design (especially as it relates to learnability and efficiency of use), solid fundamentals, and can communicate well.
+
+Here's the most recent thing I designed and built (using three.js, Electron, and Rust): 
+
+--------------------
+
+
+
+
+
+Résumé/CV: 
+
+Portfolio:

@@ -1,0 +1,9 @@
+# Hacker News comment 26662669, 2021-04-01, https://news.ycombinator.com/item?id=26662669
+
+Résumé/CV: Linkedin:  CV on request.
+
+I am looking for a summer internship in July-August. Currently, I doing my master's degree in computer science at University of Copenhagen with graduation January 2022.
+
+My special interest is in concurrent programming and massively-parallel hardware, but for this summer, I just want to get more experience working on a larger software project.  I would be happy learning a new language as well.
+
+I am looking for an apprenticeship setting were I work with a more experienced developer.

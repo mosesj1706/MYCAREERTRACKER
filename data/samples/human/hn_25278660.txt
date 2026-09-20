@@ -1,0 +1,16 @@
+# Hacker News comment 25278660, 2020-12-02, https://news.ycombinator.com/item?id=25278660
+
+I also experiment a lot with other languages. Some I like, like Spring Boot, Vue - some I don't, like Rust, React.
+
+  Résumé/CV: Self-employed since 2004. 11 years PHP, 7 years Go. AngularJS when it came out then moved on to Angular. Picked up Flutter in 2019.
+
+
+I'm interested in developing microservices that communicate over a message bus because I find that topic interesting currently. I would not like to have a leading role.
+
+Alternatively, boring is good too. Boring being the stuff I do day in day out since at least 16 years ago - full stack, frontend or backend development.
+
+No "DevOps". Aka I'm not interested in managing infrastructure and other people's deployments.
+
+I like to "keep it simple stupid", because from experience, maintainable code is "dumb" code.
+
+Thank you for reading

@@ -1,0 +1,7 @@
+# Hacker News comment 24667517, 2020-10-02, https://news.ycombinator.com/item?id=24667517
+
+Résumé/CV: 
+I worked for 5 years in a media company(vix.com) and as a Team Lead I was responsible of maintain and improve the platform that supports all the operations of the company.
+We delivered content through several channels (vix.com website, Instant Article, Google Accelerated Mobile Pages, and several feeds to social networks and devices). We went from a heavily-customized Drupal to a custom NodeJS solution with microservices reducing devops costs, enhancing website performance and finally improving the time to add new channels from an average of two week to 8 hours.
+
+Looking for new web challenges!

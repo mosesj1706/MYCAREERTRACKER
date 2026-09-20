@@ -1,0 +1,5 @@
+# claude-sonnet-5, specific prompt, Sep 2026
+
+Hey folks, I'm Dan, a cloud support engineer based in Austin. I spent the last three years at Norwood Systems (2021-2024) doing tier 2/3 support for a mid-sized SaaS platform, mostly AWS with some Azure sprinkled in. I lived in CloudWatch, VPC configs, and IAM policy debugging, and I built out a Terraform module set for our internal "Project Kestrel" migration that cut provisioning time from about 40 minutes to under 6. Before that I was at Hollis Data (2019-2021) doing on-call rotations for a Kubernetes-based logging pipeline, fixing everything from pod crash loops to broken Helm charts at 3am. I'm comfortable with Python and Bash for automation, know my way around Datadog and PagerDuty, and I've handled customer escalations where I had to explain a billing spike caused by a misconfigured Lambda to a very unhappy client without losing them.
+
+Looking for something remote or hybrid, ideally in the AWS or GCP support space. Happy to answer questions, just ask.

@@ -1,0 +1,6 @@
+# Hacker News comment 26672299, 2021-04-02, https://news.ycombinator.com/item?id=26672299
+
+Résumé/CV: Happy to send one via email
+
+
+Been tinkering with web dev for the past 5 or so years. Went back to school and recently completed my BS Comp Sci in nights/evenings while also working a full time job. Currently working for a small SaaS company with a jack-of-all-trades type position (customer support, web design, web development, bookkeeping, etc). Looking for my first 'real' engineering gig. Open to position at any point of the stack, though I am drawn toward the back-end and database layers more than the front-end.

@@ -1,0 +1,17 @@
+# Hacker News comment 20329917, 2019-07-01, https://news.ycombinator.com/item?id=20329917
+
+I've been a Ruby developer since 2005.  Prior to that I did a lot with ancient C, Objective-C and assembly.  I'm looking for a Junior position programming Rust.
+
+I know enough Rust to be useful, but not (yet) enough to architect a medium-sized green field project.  However, I really like Rust and I aggressively pursue my interests, hence my desire to do it full-time for (less) pay.
+
+So, if your company is doing enough with Rust that you'd like to offload some of the scut work, please contact me.  I'm also open to gigs doing Ruby (with or without Rails) and I have the reverse-engineering skills and temperament to work on amazingly bad legacy code, but that would be pricey and fairly short-term.
+
+
+
+
+
+
+Résumé/CV: 
+
+
+Wikipedia:

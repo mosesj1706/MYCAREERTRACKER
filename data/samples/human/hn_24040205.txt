@@ -1,0 +1,10 @@
+# Hacker News comment 24040205, 2020-08-03, https://news.ycombinator.com/item?id=24040205
+
+Résumé/CV: Available on request
+
+
+Web: 
+
+I'm a freelance engineer primarily focused on embedded hardware and firmware, from design to prototyping to manufacture. I've designed scores of small-scale embedded "glue" devices, large-scale LED controllers, hardware for autonomous vehicles, 3D mapping rigs, as well as consumer products for Kickstarters and large companies. I have experience with 3D design and machine-shop prototyping, as well as an extensive background in firmware and backend programming.
+
+I'm primarily looking to work on interesting projects, however I wouldn't rule out part- or full-time for the right company. No project is too small, and I do deep discounts for open-source or artistic work.

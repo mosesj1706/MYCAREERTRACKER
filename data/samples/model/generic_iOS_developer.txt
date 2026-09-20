@@ -1,0 +1,11 @@
+# claude-sonnet-5, generic prompt, Sep 2026
+
+**About Me**
+
+Hi, I'm an iOS developer with over 5 years of experience building apps that people actually enjoy using. I specialize in Swift and SwiftUI, with solid experience in UIKit for maintaining and modernizing legacy codebases. I've shipped apps across fintech, health, and e-commerce, working on everything from clean architecture and offline-first data syncing to smooth animations and accessibility improvements.
+
+I care about writing testable, maintainable code and enjoy collaborating closely with designers and backend teams to get the details right. I'm comfortable owning features end-to-end, from initial architecture decisions through App Store release, and I'm no stranger to CI/CD pipelines, Combine, and async/await for handling concurrency cleanly.
+
+Outside of pure feature work, I like mentoring junior devs and improving team processes—code review culture, documentation, that kind of thing.
+
+I'm currently open to full-time or contract remote roles. If you need someone who can jump in, communicate clearly, and ship polished, reliable software, let's talk. Happy to share a portfolio or GitHub on request!

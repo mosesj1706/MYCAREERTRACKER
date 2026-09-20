@@ -10,18 +10,18 @@ own predictions. Model text sits low (predictable relative to the pair); human t
 The paper reports 90%+ detection at 0.01% false positives with Falcon-7B / Falcon-7B-instruct.
 
 This runs a smaller pair by default (Qwen2.5-1.5B and -Instruct, ~3 GB each, seconds on Apple
-silicon or CPU) so it fits in a laptop tool. Smaller pairs keep the ranking but shift the
-absolute values, so the thresholds below were set with calibrate() on this app's own data, not
-copied from the paper. What that calibration showed (Sep 2026, 16 texts):
+silicon or CPU) so it fits in a laptop tool. The band edges were measured, not copied from the
+paper: scripts/calibrate_detector.py scores 40 pre-ChatGPT self-descriptions from Hacker News
+hiring threads against 20 written by this app's model. Result (Sep 2026, Sonnet 5 text):
 
-    0.76        generic cover-letter prose ("passion for data", "drive innovation")
-    0.90-1.06   the candidate's original resume; the low end is its most boilerplate lines
-    1.07-1.21   this app's tailored summaries, bullets, cover letters
+    human  0.94-1.16, median 1.02
+    model  0.90-1.10, median 1.00     best single threshold: 72% accuracy
 
-In practice the score separates *generic* from *specific* text. The app's outputs read as
-human because the prompts force concrete systems, names and numbers, which is also what a
-recruiter or a commercial detector responds to. Read the result as a band, not a verdict: short,
-jargon-dense resume text is exactly where every detector is least reliable.
+That overlap is the honest state of the art for a small pair against a current model. So the
+bands only claim what the data supports: below LOW nothing human scored (model-like), above
+HIGH almost nothing model scored (human-like), and most text lands in between as borderline.
+Generic boilerplate ("passion for data, drive innovation") still scores far below anything
+human (0.76). Short resume bullets are not scored at all.
 
 Optional: needs `pip install torch transformers`. Without them available() is False and the
 API says so instead of failing.
@@ -37,10 +37,10 @@ PERFORMER = os.getenv("MCT_DETECTOR_PERFORMER", "Qwen/Qwen2.5-1.5B-Instruct")
 MAX_TOKENS = 512
 MIN_WORDS = 40   # below this the score is noise
 
-# From the calibration above. Below LOW reads as model text; above HIGH reads as human; between
-# is the grey zone where the tell scanner is the better guide.
-LOW = float(os.getenv("MCT_DETECTOR_LOW", "0.85"))
-HIGH = float(os.getenv("MCT_DETECTOR_HIGH", "0.95"))
+# From scripts/calibrate_detector.py. Below LOW nothing human scored; above HIGH almost nothing
+# model scored; between is borderline, where the tell scanner is the better guide.
+LOW = float(os.getenv("MCT_DETECTOR_LOW", "0.935"))
+HIGH = float(os.getenv("MCT_DETECTOR_HIGH", "1.075"))
 
 _models = None
 
@@ -106,9 +106,3 @@ def score(text: str) -> Score:
     return Score(s, band, words)
 
 
-def calibrate(human: list[str], model: list[str]) -> dict:
-    """Score two labelled sets and report where they separate. Used once to set LOW/HIGH."""
-    h = sorted(binoculars(t) for t in human if len(t.split()) >= MIN_WORDS)
-    m = sorted(binoculars(t) for t in model if len(t.split()) >= MIN_WORDS)
-    return {"human": [round(x, 3) for x in h], "model": [round(x, 3) for x in m],
-            "human_min": round(h[0], 3) if h else None, "model_max": round(m[-1], 3) if m else None}

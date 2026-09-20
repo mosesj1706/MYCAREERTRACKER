@@ -1,0 +1,11 @@
+# claude-sonnet-5, generic prompt, Sep 2026
+
+**About Me**
+
+Hi, I'm a full-stack developer with 4+ years of experience building web applications from concept to deployment. I work comfortably across the stack—React, TypeScript, and Next.js on the frontend, Node.js, Python, and PostgreSQL on the backend. I've built everything from SaaS dashboards to e-commerce platforms to internal tools that saved teams hours of manual work each week.
+
+I care about clean, maintainable code and writing things I won't dread revisiting six months later. I'm equally comfortable diving into someone else's codebase as I am architecting something from scratch, and I genuinely enjoy the problem-solving side of development—whether that's optimizing a slow query or untangling a gnarly state management bug.
+
+Beyond the technical stuff, I communicate clearly, hit deadlines, and don't disappear when things get messy. I've worked remotely with distributed teams across time zones and I'm self-directed enough to keep projects moving without constant oversight.
+
+Open to contract, freelance, or full-time roles. Feel free to reach out—happy to share my portfolio, GitHub, or hop on a call.

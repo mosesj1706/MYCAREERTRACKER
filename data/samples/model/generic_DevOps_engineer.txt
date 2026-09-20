@@ -1,0 +1,9 @@
+# claude-sonnet-5, generic prompt, Sep 2026
+
+**About Me**
+
+Hi, I'm a DevOps engineer with 5+ years of experience helping teams ship faster and more reliably. I specialize in building CI/CD pipelines, managing cloud infrastructure (AWS, GCP), and automating everything that shouldn't require human hands—from deployments to scaling to monitoring. My toolkit includes Terraform, Kubernetes, Docker, Ansible, and Jenkins, and I'm comfortable writing scripts in Python and Bash to glue systems together when off-the-shelf tools fall short.
+
+I've worked in startups and mid-sized companies, so I know how to balance moving fast with keeping systems stable and secure. I care a lot about observability—if something breaks, I want to know why within minutes, not hours. I also enjoy mentoring developers on infrastructure best practices so DevOps isn't a bottleneck but a shared responsibility.
+
+I'm looking for a remote or hybrid role where I can own infrastructure end-to-end, collaborate with a strong engineering team, and keep learning. Open to contract or full-time opportunities. Feel free to DM me or check out my GitHub—happy to chat about your stack and see if I'm a good fit!

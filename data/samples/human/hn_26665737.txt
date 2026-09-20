@@ -1,0 +1,10 @@
+# Hacker News comment 26665737, 2021-04-01, https://news.ycombinator.com/item?id=26665737
+
+Data scientist with 15 years experience - Before people even knew to call themselves "data scientists".
+I'm an experienced data scientist who is looking for new projects to take on. My usual consultancy has taken on a massive healthcare project which I'm not able to participate in as I'm Canadian. So I'm out looking for projects myself.
+
+My past projects have included things like wound identification, AR repayment prediction, mechanical systems failure prediction, and chat agents.
+
+I'm currently very interested in ML safety/security. This is a Greenfield area that no one is taking seriously at the moment. I expect it to be extremely important in the near future.
+
+My contact details are in the profile if you're looking for someone to join your team, or if you want to collaborate on a project.

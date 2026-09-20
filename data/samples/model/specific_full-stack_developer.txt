@@ -1,0 +1,7 @@
+# claude-sonnet-5, specific prompt, Sep 2026
+
+Hey, I'm Dan Reyes, full-stack dev based in Austin, open to remote work. I've been building web apps for about 6 years, most recently at Fetchpoint Logistics (2021-2024) where I rebuilt their dispatch dashboard using React, TypeScript, and a Node/Express API backed by Postgres. That project cut average load times from 4.2s to under 900ms and it's still running their core ops for like 40 warehouses.
+
+Before that I was at a smaller shop called Brindle Software doing contract work, mostly Django and Vue, plus some Rails maintenance on a legacy app called Ledgerly that I somehow kept alive for two years without a full rewrite.
+
+I'm comfortable with Docker, AWS (EC2, S3, RDS), and I've been messing with Next.js and Supabase on side projects lately, including a habit tracker app called Loopstack I built over a few weekends. I write decent tests, I don't ghost on code reviews, and I actually like fixing other people's bugs. Happy to share GitHub or references if you want specifics.

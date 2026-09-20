@@ -1,0 +1,14 @@
+# Hacker News comment 20331990, 2019-07-02, https://news.ycombinator.com/item?id=20331990
+
+Let's build something amazing together!
+
+Hi, I'm Chris and I'm a Senior Software Engineer and formally a VP of Information Technology.
+
+  Résumé/CV: 
+  Edu: USC M.S. of Computer Science 2008 + B.S. Computer Science and Engineering 2007
+
+I've written API micro-services in Go and Ruby+rails. Written PHP consumers. I've written OpenAPI specifications and implemented them in Go, created entity-relationship diagrams (ERD) and implemented them in SQL along with minimal and necessary indices. I've also created CI/CD pipelines in Jenkins and Google Cloud Build.
+
+Mentored and trained small teams of developers. Hands-on leader of projects, large and small.
+
+I love work that has a real impact on people's lives and would enjoy continuing to do that.

@@ -1,0 +1,7 @@
+# claude-sonnet-5, specific prompt, Sep 2026
+
+Hey folks, I'm Mark, a data engineer with about 6 years of experience, currently looking for my next gig. I spent the last three years at Fenwick Logistics building out their ETL pipelines using Airflow, dbt, and Snowflake, basically rebuilding their whole reporting stack (Project Meridian) after their old Redshift setup kept falling over during month end close. Before that I was at a smaller startup called Cobalt Metrics doing Python/Spark work on AWS, moving about 2TB a day through Kafka into S3 and Redshift.
+
+I like fixing pipelines that are held together with duct tape and cron jobs. I'm comfortable in Python, SQL, and enough Terraform to not embarrass myself. I've worked with Postgres, Snowflake, BigQuery, and a bit of Databricks.
+
+I'm based in Chicago, open to remote or hybrid, and looking for something in the $130-150k range. Happy to share code samples or walk through past pipeline designs if you want more detail. Feel free to DM me.

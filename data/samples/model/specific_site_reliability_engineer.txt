@@ -1,0 +1,5 @@
+# claude-sonnet-5, specific prompt, Sep 2026
+
+Hey, I'm Dan. I've been doing SRE/infra work for about 7 years, most recently at a fintech startup called Ledgerly (2021-2024) where I ran a Kubernetes platform handling roughly 40k requests/sec at peak. I built out our on-call rotation from scratch, cut incident MTTR from 90 minutes to about 18 by rewriting our alerting rules in Prometheus and killing off a ton of noisy, low-value pages. Before that I was at a logistics company called Freightline doing more traditional ops, migrating a pile of cron-job spaghetti into Airflow and moving us off bare metal onto AWS.
+
+Day to day I'm comfortable with Terraform, Ansible, Grafana, and I've written a fair amount of Go and Python for internal tooling (my proudest one is a chaos-testing tool called Wrench that we used to break our own staging cluster on purpose every Friday). I like small teams where I can touch everything from database tuning to CI pipelines. Based in Denver, open to remote, happy to jump on a call if you want to talk specifics.

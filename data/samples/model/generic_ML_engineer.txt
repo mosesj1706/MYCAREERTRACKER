@@ -1,0 +1,11 @@
+# claude-sonnet-5, generic prompt, Sep 2026
+
+**About Me**
+
+Hi, I'm a Machine Learning Engineer with 4+ years of experience building and deploying production-grade ML systems. My background spans NLP, computer vision, and recommendation systems, with hands-on expertise in PyTorch, TensorFlow, and scikit-learn. I've led projects from data pipeline design through model deployment, including fine-tuning transformer models, building real-time inference APIs, and optimizing models for latency and cost on cloud infrastructure (AWS/GCP).
+
+I'm comfortable working across the full ML lifecycle—EDA, feature engineering, model selection, MLOps (Docker, Kubernetes, CI/CD), and monitoring in production. I care deeply about writing clean, maintainable code and collaborating closely with product and engineering teams to ship solutions that actually solve business problems, not just perform well on a leaderboard.
+
+Recently, I've been diving into LLM fine-tuning and retrieval-augmented generation (RAG) systems, and I'm excited about opportunities where I can apply this to real-world applications.
+
+I'm open to full-time remote roles or contract work. Feel free to DM me—happy to share my resume, GitHub, or chat about your project's needs!

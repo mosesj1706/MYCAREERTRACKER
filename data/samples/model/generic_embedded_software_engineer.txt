@@ -1,0 +1,9 @@
+# claude-sonnet-5, generic prompt, Sep 2026
+
+**About Me**
+
+Hi, I'm an embedded software engineer with 5+ years of experience building firmware for resource-constrained systems. I specialize in C and C++ development for ARM Cortex-M microcontrollers, with hands-on experience in RTOS environments (FreeRTOS, Zephyr) and bare-metal programming. My background spans automotive sensor systems, IoT device firmware, and industrial control applications, where I've worked on everything from low-level driver development to communication protocols like I2C, SPI, UART, and CAN.
+
+I'm comfortable working close to the hardware—debugging with oscilloscopes and logic analyzers, optimizing for memory and power constraints, and writing code that has to work reliably the first time. I also have experience with build systems, version control workflows, and writing unit tests for embedded code, which isn't always glamorous but saves everyone headaches down the line.
+
+I enjoy collaborating with hardware engineers early in the design process and take pride in writing clean, maintainable code even under tight timelines. Currently open to full-time or contract remote roles. Feel free to reach out—happy to share code samples or chat about your project!

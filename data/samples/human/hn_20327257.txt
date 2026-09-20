@@ -1,0 +1,14 @@
+# Hacker News comment 20327257, 2019-07-01, https://news.ycombinator.com/item?id=20327257
+
+Résumé/CV: Available upon request.
+
+
+I'm open to all positions or contracts.
+
+I took a break to complete my degree a few years back. I have recently completed a small project, but I do have a coding resume gap after graduation (open to discussion) that I'm looking to close.
+
+My work experience is focused in full stack web development and managing IT infrastructure. I am comfortable outside of this range and have worked on systems ranging from USB duplication automation, warehouse inventory systems, and 'complex' proprietary databases.
+
+I enjoy working independently or with teams, and have experience developing practical solutions to problems. I am capable of quickly learning new tech on my own time, or absorbing knowledge by working with others.
+
+Current side project: Building a web app using Flask for the backend and React for the frontend.

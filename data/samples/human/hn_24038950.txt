@@ -1,0 +1,26 @@
+# Hacker News comment 24038950, 2020-08-03, https://news.ycombinator.com/item?id=24038950
+
+Résumé/CV: 
+
+
+I'd be immediately most comfortable working with Python (backend or maybe infrastructure), or doing embedded C/++ IoT work.
+
+I'm personally hoping to continue developing my skills in DevOps, sysadmin, and database technologies. I'm also aiming to get more real-world exposure to cloud platforms. I'm moderately comfortable on GCP at the moment, and I'd be happy to work with AWS and Azure as well. I'd be excited to work with React, React-native, or Flutter.
+
+Technologies of immediate professional interest:
+
+- Python
+
+- Cloud
+
+- IoT
+
+- Rust
+
+- DevOps
+
+- System Administration
+
+- Database Administration
+
+- React/Flutter/Django/Flask/Actix

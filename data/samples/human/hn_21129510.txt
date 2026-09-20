@@ -1,0 +1,9 @@
+# Hacker News comment 21129510, 2019-10-01, https://news.ycombinator.com/item?id=21129510
+
+Résumé/CV: 
+  Looking for: (Senior/Lead) Fullstack Engineer, Site Reliability Engineer
+  Timezone: UTC -6
+
+I have 6 years of experience developing high-traffic, full-stack web applications. I've built everything from social media app backends to very complex dashboards to mobile-first Progressive Web Apps to web-based, event-driven games. I've also designed and deployed large, distributed, and scalable cloud infrastructures. I've often had full ownership of these projects, with junior developers underwing. I've planned milestones, set and met deadlines, and empowered my colleagues to deliver their best. I strongly enjoy teaching others and helping my teams work together to meet ambitious goals.
+
+I have a solid grasp of software engineering fundamentals and system design. I believe in clean and simple code designs modeled around data. I prefer readable and testable solutions to clever ones. I'm motivated to exceed requirements and have an end result that is both performant and provides a superior user experience.

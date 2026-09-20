@@ -1,0 +1,8 @@
+# Hacker News comment 24041664, 2020-08-03, https://news.ycombinator.com/item?id=24041664
+
+Résumé/CV: available on request
+  Portfolio: 
+
+m a junior data scientist currently working as a Section Lead at Lambda School supporting the learning and professional growth of other Lambda students while deepening my skills in Data Science.
+Proficient in Python and SQL, my strongest skills are Data analysis, Data wrangling & implementing predictive models using Data Science libraries.
+I'm highly adaptable, a big proponent of adaptation, dedication, self-motivation, coordination, hard work and flexibility. I'm interested in utilizing Data to implement business solutions, and I am ready to embrace a new challenge.

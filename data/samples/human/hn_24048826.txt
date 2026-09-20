@@ -1,0 +1,11 @@
+# Hacker News comment 24048826, 2020-08-04, https://news.ycombinator.com/item?id=24048826
+
+Résumé/CV:  I've spent the last 13 years designing and building mission-critical software, data, and cloud solutions for customers in the Financial Markets, including Fortune 500 companies, Investment Managers, Hedge Funds, Venture Capital, Private Equity, and Data Vendors.
+
+I've successfully developed cloud based web apps, custom dashboards, distributed financial data pipelines, low-latency and high-throughput market data systems, natural language text analytics, software/data architecture including micro-services, front, middle, back office automation, network security/encryption, automated trading algorithms, quantamental process automation, and ETL systems;
+
+
+
+Personal: www.ryansmccoy.com/
+
+Portfolio:

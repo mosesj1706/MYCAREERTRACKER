@@ -1,0 +1,9 @@
+# claude-sonnet-5, specific prompt, Sep 2026
+
+Hey, I'm Sam Rutledge, data scientist based in Denver, looking for remote or hybrid roles starting in October.
+
+I spent the last three years at Fenwick Analytics building demand forecasting models for a regional grocery chain, cut inventory waste by about 18% on a project called "GreenCart" using XGBoost and Prophet. Before that I was at a smaller fintech startup, Loomis Pay, where I built fraud detection pipelines in Python and SQL, processing around 2 million transactions a day, and got false positives down from 4.1% to 1.6%.
+
+I'm comfortable across the stack: pandas, scikit-learn, PyTorch for the occasional deep learning project, Airflow for pipelines, dbt for transformations, and I've deployed models on AWS SageMaker more times than I can count. I also do a decent amount of dashboarding in Looker and Tableau when stakeholders need something visual.
+
+I like messy real-world data problems more than Kaggle-clean ones. Happy to share code samples or chat about specifics, just DM me.

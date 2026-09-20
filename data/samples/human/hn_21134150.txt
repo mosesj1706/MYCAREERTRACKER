@@ -1,0 +1,12 @@
+# Hacker News comment 21134150, 2019-10-02, https://news.ycombinator.com/item?id=21134150
+
+Data: MongoDB | Solr | SQL (most recently Postgres, MariaDB)
+
+Cloud: AWS | GitHub | Docker
+
+Résumé/CV: 
+
+
+I am a remote full stack engineer and engineering manager with experience building out and onboarding a remote team from 1 full time engineer (myself) up to a 9 person engineering team coupled with natural company growth. I have approximately 15 years of professional software engineering experience. I am capable of working anywhere in the stack and quickly learning new technologies as needed. I can wear many hats, and I am definitely a jack of all trades type.
+
+I am looking for an early stage role at a remote first company or an early stage role at a company thinking about utilizing a remote team. I am happy and capable of an IC role and moving back in to management as company growth permits. I'm not including any PII or using my normal hn or github account with this post as several of my team members read the site, and I am not dead set on leaving my current position yet. I'm more interested in feeling out the waters and seeing if there are any interesting roles out there. Please feel free to email me at the address listed and I will be happy to provide you with actual github, linkedin, etc, and talk about the role that you have in mind.

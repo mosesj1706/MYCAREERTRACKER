@@ -1,0 +1,9 @@
+# claude-sonnet-5, generic prompt, Sep 2026
+
+Hi everyone! I'm a Cloud Support Engineer with hands-on experience troubleshooting and maintaining infrastructure across AWS and Azure environments. Over the past few years, I've helped businesses resolve everything from networking bottlenecks and IAM misconfigurations to deployment failures and cost optimization issues. I'm comfortable working directly with clients, breaking down technical problems into clear, actionable explanations, and staying calm under pressure when systems go down.
+
+My toolkit includes Linux administration, scripting with Python and Bash, container orchestration with Docker and Kubernetes, and monitoring setups using CloudWatch, Datadog, and Grafana. I genuinely enjoy the detective work of diagnosing root causes and building documentation so issues don't recur.
+
+I'm currently looking for a remote or hybrid support/DevOps role where I can keep learning while making a real impact on reliability and customer satisfaction. I thrive in collaborative teams, value clear communication, and take ownership of problems until they're actually solved—not just patched.
+
+Feel free to reach out—happy to share my resume or chat!

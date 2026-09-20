@@ -1,0 +1,7 @@
+# claude-sonnet-5, specific prompt, Sep 2026
+
+Hey folks, I'm Marcus, backend developer with about 6 years under my belt, currently open to contract or full-time remote work. I spent 2019-2022 at a fintech startup called Ledgerly building out their payments API in Go, handling roughly 40k transactions a day without anything catching fire. After that I moved to Brightpath Health, working mostly in Python/Django and Postgres, building internal tools for scheduling and patient records. I've got solid experience with Docker, Redis, and setting up CI/CD pipelines with GitHub Actions, plus I've deployed stuff on both AWS and DigitalOcean depending on budget constraints.
+
+Lately I've been messing around with a side project called Cartwheel, a small inventory tracking tool for local shops, just to keep my hands dirty with Node and Express.
+
+I like clean APIs, reasonable test coverage, and not getting paged at 2am. Happy to jump on a call, show you some code, whatever works. Rates are negotiable depending on scope.

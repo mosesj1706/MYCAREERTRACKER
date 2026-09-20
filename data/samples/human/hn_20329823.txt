@@ -1,0 +1,10 @@
+# Hacker News comment 20329823, 2019-07-01, https://news.ycombinator.com/item?id=20329823
+
+Relocate: no
+
+
+Strong mathematical background: math PhD in algebraic geometry after math BS at Caltech, with more recent work focusing on applications of topology to evolution of financial networks and public health networks. Topological data analysis, applied alg geom, dimension reduction techniques like SVD, eigen-anything -- that's my jam. I also love data visualization to tell a mathematical story to both technical and non-technical folks, tuning the difficulty level to the audience.
+
+I'm looking to learn from a great team in machine learning.
+
+LinkedIn page:

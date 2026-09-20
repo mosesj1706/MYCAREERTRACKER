@@ -1,0 +1,7 @@
+# claude-sonnet-5, specific prompt, Sep 2026
+
+Hey folks, I'm Marcus, DevOps engineer with about 6 years in the trenches. I spent the last three years at Vantage Freight running their AWS infrastructure, migrating a monolith to ECS and cutting deploy times from 40 minutes to under 6 using GitHub Actions and Terraform. Before that I was at a smaller shop called Nordlyte doing on-call for a Kubernetes cluster that hosted their "Beacon" analytics platform, basically kept 15 microservices alive and wrote a ton of Prometheus/Grafana dashboards so nobody had to page me at 3am anymore.
+
+Day to day I'm comfortable with Terraform, Ansible, Docker, Jenkins, and I've been getting deep into ArgoCD for GitOps workflows lately. Also decent at Python and Go for writing internal tooling, built a Slack bot at Vantage that automated our rollback process and saved the team probably 5-10 hours a week.
+
+Looking for something remote, ideally a team that actually writes tests and doesn't treat infra as an afterthought. Happy to chat, portfolio and references available.

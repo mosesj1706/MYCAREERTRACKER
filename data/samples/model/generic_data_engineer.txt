@@ -1,0 +1,9 @@
+# claude-sonnet-5, generic prompt, Sep 2026
+
+**About Me**
+
+Hi, I'm a data engineer with 4+ years of experience building and maintaining scalable data pipelines and infrastructure. I specialize in Python, SQL, and cloud platforms like AWS and GCP, with hands-on experience using tools like Airflow, dbt, Spark, and Kafka to move and transform data efficiently. I've worked extensively with both batch and real-time data processing, designing systems that support analytics, machine learning, and business intelligence needs across teams.
+
+I enjoy solving problems at the intersection of software engineering and data—optimizing query performance, architecting data warehouses (Snowflake, BigQuery, Redshift), and ensuring data quality through robust testing and monitoring practices. I'm comfortable working independently or collaborating closely with data scientists, analysts, and product teams to translate business requirements into reliable technical solutions.
+
+I'm currently open to full-time or contract remote opportunities, ideally in a role where I can own pipeline architecture and mentor junior engineers. I care about clean, maintainable code and clear documentation. Feel free to reach out if you think I'd be a good fit—happy to share my resume, GitHub, or chat about your data challenges!

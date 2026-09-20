@@ -1,0 +1,27 @@
+# Hacker News comment 20334631, 2019-07-02, https://news.ycombinator.com/item?id=20334631
+
+CTO with 22 years in IT, 11 years as CTO
+
+  Role: CTO
+  Relocate: Yes / Optional
+  Résumé/CV: 
+
+Technologies
+
+Languages: Ruby, Lua, SQL, Javascript, JSON, HAML, HTML, SASS, CSS, Applescript, XML, Python, R, PHP, Java, Go, Perl, C, Basic
+
+Frameworks: Sinatra, LuaRocks, Riot.js, D3.js, Ruby on Rails, Django, Flask, Hugo, Jekyll
+
+Version control: Git, SVN
+
+Data: PostgreSQL, Redshift, Redis, Sidekiq, RabbitMQ, MySQL, Elastic, Mode Analytics
+
+Deployment: Terraform, Ansible, Chef, Puppet
+
+Cloud: AWS, OpenStack, CloudFoundry, Heroku
+
+Editors: Vim, Atom, Microsoft Visual Code
+
+Design: Sketch, Pixelmator, Adobe Photoshop, Adobe Illustrator
+
+Operating Systems: OpenBSD (daily driver), macOS, FreeBSD, Solaris, Ubuntu Linux, iOS, Android, Windows

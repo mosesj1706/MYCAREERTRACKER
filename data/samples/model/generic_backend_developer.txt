@@ -1,0 +1,9 @@
+# claude-sonnet-5, generic prompt, Sep 2026
+
+**About Me**
+
+Hi, I'm a backend developer with 4+ years of experience building scalable, reliable systems that power real-world applications. I specialize in designing RESTful APIs, optimizing database performance, and architecting microservices that can handle high traffic without breaking a sweat. My core stack includes Node.js, Python, and Go, paired with PostgreSQL, Redis, and MongoDB for data layers. I'm comfortable working across the full backend lifecycle—from initial system design and infrastructure setup (Docker, AWS, CI/CD pipelines) to debugging production issues at 2 AM when something inevitably goes sideways.
+
+I care deeply about clean, maintainable code and writing systems that other developers will actually enjoy working with. I've worked in both startup environments where I wore multiple hats and larger teams where collaboration and clear communication were essential. I'm equally happy pairing with teammates or diving deep into a gnarly problem solo.
+
+Currently open to full-time or contract remote opportunities. If you need someone who can own backend architecture and ship dependable systems, let's talk—I'd love to hear about what you're building.

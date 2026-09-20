@@ -1,0 +1,13 @@
+# Hacker News comment 24039462, 2020-08-03, https://news.ycombinator.com/item?id=24039462
+
+Hi, I’m Vince, I’m looking to join a team as a Backend Software Engineer. I used to work at a mobile-gaming startup in the Bay Area where I built services in Go. In more detail, I:
+
+- Built microservices powered by real-time sports data (NBA and League of Legends)
+
+- Developed libraries used across all services: client SDKs, an internal web framework, data store clients, validation tools
+
+- Rolled out testing infrastructure for writing automated tests resulting in faster development cycles and ongoing test coverage
+
+- Improved engineering standards by actively contributing to docs and reviews related to writing idiomatic Go code, web APIs, app architecture, and testing
+
+Sadly, the startup wasn't able to secure a Series A round due to the recent pandemic and I was a part of the layoffs. Before working in tech, I worked in finance for 2 years. Thanks for reading, email or message me on LinkedIn if you’d like to chat.

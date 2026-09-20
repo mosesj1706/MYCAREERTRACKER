@@ -1,0 +1,19 @@
+# Hacker News comment 24661021, 2020-10-02, https://news.ycombinator.com/item?id=24661021
+
+* Cloud technologies (AWS/Azure/GCP) - a lot of Terraform work as of late. Recently automated GPU-based infrastructure for a MedTech startup (fun times).
+
+* NodeJS/Meteor/SailsJS
+
+* Serverless (going heavy on that one)
+
+* Crypto/Blockchain - building Crypto infrastructure (multiple Blockchains), customized libraries and APIs, as well as front-end (MetaMask) solutions.
+
+* Wordpress/CodeIgniter/Yii/Drupal (Components, Hacks, Themes) - less motivated, unless truly cutting edge (or WP VIP projects)
+
+* CI & Unit testing - Jenkins, Mocha & Karma for JS, Toast for PHP, as well as Selenium
+
+* Django (general Python too) - to a lesser extent
+
+
+
+Looking for Challenging projects. Most recently worked extensively with Serverless & AWS APIs, building cloud-related prototypes, before that worked as a cloud automation specialist.

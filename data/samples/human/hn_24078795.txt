@@ -1,0 +1,7 @@
+# Hacker News comment 24078795, 2020-08-07, https://news.ycombinator.com/item?id=24078795
+
+Need help with an NLP project? I've implemented several systems from scratch, working with Japanese and English over the years, and can help you set something up or improve your data pipeline.
+
+My one-line open source resume: I maintain the most popular Japanese tokenizer in Python, and added most of the Japanese support in spaCy, and have recently fixed issues with Japanese in Transformers and sacrebleu.
+
+Outside open source I worked in e-commerce for several years and have been supporting work on a fashion search app as a continuation of that.

@@ -1,0 +1,13 @@
+# Hacker News comment 24056199, 2020-08-05, https://news.ycombinator.com/item?id=24056199
+
+Typescript, javascript, react, redux, webpack
+
+C#/.NET, Java, Erlang, Haskell
+
+Résumé/CV:
+
+12 years of study and practice in programming language design and implementation/compiler design, 2 of those years professionally on a prominent rapid application development product
+
+Led a contract team of five in delivering a from-scratch web-app based on AWS Lambda, DynamoDB, and a statically hosted website, built to scale from near zero up to hundreds of requests per minute for a single day of the year, and back down to near zero afterward.
+
+Interested in tooling, amplifying the work of others, creating the minimal set of primitives to give the greatest usability, and making reliable and maintainable systems.

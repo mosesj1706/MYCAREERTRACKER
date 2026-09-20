@@ -1,0 +1,12 @@
+# Hacker News comment 24043846, 2020-08-03, https://news.ycombinator.com/item?id=24043846
+
+Résumé/CV:
+
+- 
+
+- 
+
+
+I'm looking for a role as a software development manager. My background includes building web apps and high-traffic websites as a full-stack dev, so a SaaS company would probably be the best fit. Because of my time spent as an SRE, I have a strong focus in making sure systems are reliable and maintainable, to minimize the time spent putting out fires.
+
+I like solving people's problems, which sometimes means asking "why" to figure out the real problem instead of just fixing symptoms. I'm good at iteratively developing processes, so I would bring a lot to the table in a company that needs help bringing order to chaos.

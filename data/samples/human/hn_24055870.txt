@@ -1,0 +1,12 @@
+# Hacker News comment 24055870, 2020-08-05, https://news.ycombinator.com/item?id=24055870
+
+(Hardware acceleration): CUDA, nvprof, OpenGL, HLSL; 
+(Machine learning): Python, scikit-learn, pytorch, OpenGM, U-SQL, Scope ML; 
+(General computing): C/C++, C#, Android, iOS, Java, Swift, Objective-C, HTML, Git, bash, Linux
+
+(Download):  | 
+(In-browser):  | 
+(In-browser single-page): 
+
+
+Notes: Recent MS grad in ECE (summer 2020) with a particular passion for GPU kernel development, hardware acceleration, and ML/CV (modelling/deployment). I enjoy contributing to/optimizing the technical core of complex systems. My past five internships and latest research have spanned GPU kernel dev/optimization, malware detection, code regression detection, video acceleration, iOS/Android app dev + acceleration. I love fast-paced environments and learning, and I most especially value opportunities for recent grads.
