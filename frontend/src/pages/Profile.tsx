@@ -90,7 +90,7 @@ export default function ProfilePage() {
         </div>
         <div className="space-y-4">
           <GitHubCard />
-          <Card className="p-4"><TellCheck url="/api/profile/tells" compact /></Card>
+          <Card className="p-4"><TellCheck url="/api/profile/tells" compact onApplied={() => qc.invalidateQueries({ queryKey: ["profile"] })} /></Card>
           <Card>
             <CardHeader title="What a recruiter will probe" subtitle="Rehearse answers for each" />
             <ul className="px-5 pb-5 space-y-2.5">{p.risk_flags.map((r, i) => <li key={i} className="flex gap-2 text-[13px] text-muted"><Flag className="size-3.5 mt-0.5 shrink-0 text-warn" />{r}</li>)}</ul>

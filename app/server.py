@@ -111,6 +111,7 @@ class TellSection(BaseModel):
     label: str
     text: str
     kind: str = "prose"   # "prose" | "bullets"
+    field: str | None = None   # set by the profile/application reports so a fix can be applied back
 
 
 class TellRequest(BaseModel):
@@ -121,7 +122,8 @@ class TellRequest(BaseModel):
 def _check(sections: list[TellSection], use_detector: bool) -> dict:
     out = []
     for sec in sections:
-        row: dict[str, Any] = {"label": sec.label, "kind": sec.kind, "tells": tells.scan(sec.text, sec.kind).as_dict(), "detector": None}
+        row: dict[str, Any] = {"label": sec.label, "kind": sec.kind, "field": sec.field, "text": sec.text,
+                               "tells": tells.scan(sec.text, sec.kind).as_dict(), "detector": None}
         if use_detector and detector.available() and sec.kind == "prose":
             row["detector"] = detector.score(sec.text).as_dict()
         out.append(row)
@@ -135,13 +137,55 @@ def tells_check(req: TellRequest):
     return _check(req.sections, req.detector)
 
 
+@app.post("/api/tells/fix")
+def tells_fix(sec: TellSection):
+    """Rewrite only the flagged sentences (facts kept), rescan, return both."""
+    text, report, passes = tells.fix(sec.text, sec.kind, keep_lines=sec.kind == "bullets" or sec.field == "projects")
+    return {"label": sec.label, "kind": sec.kind, "field": sec.field, "text": text, "tells": report.as_dict(), "passes": passes}
+
+
+class TellApply(BaseModel):
+    field: str
+    text: str
+
+
+def _lines(text: str) -> list[str]:
+    return [l.strip() for l in text.splitlines() if l.strip()]
+
+
+def _profile_sections(p: Profile) -> list[TellSection]:
+    return [TellSection(label="Summary", text=p.summary, field="summary"),
+            TellSection(label="Experience bullets", text="\n".join(b for e in p.experience for b in e.bullets), kind="bullets", field="bullets"),
+            TellSection(label="Project descriptions", text="\n".join(pr.description for pr in p.projects), field="projects")]
+
+
 @app.get("/api/profile/tells")
 def profile_tells(detector_on: bool = False):
+    return _check(_profile_sections(_profile()), detector_on)
+
+
+@app.post("/api/profile/tells/apply")
+def profile_tells_apply(body: TellApply):
+    """Write a fixed section back into the profile. Bullet lists map back by position."""
     p = _profile()
-    secs = [TellSection(label="Summary", text=p.summary),
-            TellSection(label="Experience bullets", text="\n".join(b for e in p.experience for b in e.bullets), kind="bullets"),
-            TellSection(label="Project descriptions", text="\n\n".join(pr.description for pr in p.projects))]
-    return _check(secs, detector_on)
+    if body.field == "summary":
+        p.summary = body.text.strip()
+    elif body.field == "bullets":
+        lines = _lines(body.text)
+        if len(lines) != sum(len(e.bullets) for e in p.experience):
+            raise HTTPException(400, "Bullet count changed - not applied.")
+        for e in p.experience:
+            e.bullets, lines = lines[: len(e.bullets)], lines[len(e.bullets):]
+    elif body.field == "projects":
+        lines = _lines(body.text)
+        if len(lines) != len(p.projects):
+            raise HTTPException(400, "Project count changed - not applied.")
+        for pr, d in zip(p.projects, lines):
+            pr.description = d
+    else:
+        raise HTTPException(400, f"Unknown field {body.field}")
+    profile_store.save(p)
+    return get_profile()
 
 
 @app.get("/api/applications/{app_id}/tells")
@@ -152,10 +196,32 @@ def application_tells(app_id: int, detector_on: bool = False):
     if a.tailored is None:
         raise HTTPException(400, "This application has no tailored output yet - run Tailor first.")
     t = a.tailored
-    secs = [TellSection(label="Tailored summary", text=t.summary),
-            TellSection(label="Rewritten bullets", text="\n".join(b.rewritten for b in t.bullets), kind="bullets"),
-            TellSection(label="Cover letter", text=t.cover_letter)]
+    secs = [TellSection(label="Tailored summary", text=t.summary, field="summary"),
+            TellSection(label="Rewritten bullets", text="\n".join(b.rewritten for b in t.bullets), kind="bullets", field="bullets"),
+            TellSection(label="Cover letter", text=t.cover_letter, field="cover_letter")]
     return _check(secs, detector_on)
+
+
+@app.post("/api/applications/{app_id}/tells/apply")
+def application_tells_apply(app_id: int, body: TellApply):
+    a = tracker.get(app_id)
+    if a is None or a.tailored is None:
+        raise HTTPException(404, "Application or tailored output not found")
+    t = a.tailored
+    if body.field == "summary":
+        t.summary = body.text.strip()
+    elif body.field == "cover_letter":
+        t.cover_letter = body.text.strip()
+    elif body.field == "bullets":
+        lines = _lines(body.text)
+        if len(lines) != len(t.bullets):
+            raise HTTPException(400, "Bullet count changed - not applied.")
+        for b, l in zip(t.bullets, lines):
+            b.rewritten = l
+    else:
+        raise HTTPException(400, f"Unknown field {body.field}")
+    tracker.save_tailored(app_id, t)
+    return tracker.get(app_id)
 
 
 @app.get("/api/usage")

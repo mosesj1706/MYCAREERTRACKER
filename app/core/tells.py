@@ -13,7 +13,8 @@ and the research behind them lean on:
   - burstiness: humans vary sentence length a lot; models keep it even (GPTZero's second signal)
   - repeated sentence openers and identical bullet structure
 
-Everything here is deterministic. detector.py holds the statistical score.
+scan() is deterministic. fix() sends the flagged sentences back to the model with the reasons,
+rewrites only those, and rescans. detector.py holds the statistical score.
 """
 import re
 import statistics
@@ -195,3 +196,33 @@ def scan(text: str, kind: str = "prose") -> TellReport:
     label = "reads as your own" if score < 15 else "a few tells" if score < 40 else "reads as generated"
     findings.sort(key=lambda f: -f.weight)
     return TellReport(score=score, label=label, findings=findings, stats=stats)
+
+
+# --- fixing --------------------------------------------------------------------------------------
+MAX_PASSES = 2
+
+
+def fix(text: str, kind: str = "prose", keep_lines: bool = False) -> tuple[str, TellReport, int]:
+    """Rewrite only the flagged sentences, keeping every fact, then rescan. Up to MAX_PASSES.
+
+    Returns (text, report, passes). With keep_lines (bullet lists, one-project-per-line) a reply
+    whose line count drifted is discarded so the caller can always map lines back by position.
+    """
+    from app.core import llm
+    from app.core.config import load_prompt
+    from app.core.text import plain
+
+    report = scan(text, kind)
+    passes = 0
+    n_lines = len([l for l in text.splitlines() if l.strip()])
+    while passes < MAX_PASSES and any(f.weight >= 2 for f in report.findings):
+        flagged = "\n".join(f"- [{f.rule}] {f.where}\n  -> {f.detail}" for f in report.findings if f.rule not in ("punctuation",))
+        user = (f"<text kind=\"{kind}\">\n{text}\n</text>\n\n<flagged>\n{flagged}\n</flagged>")
+        out = plain(llm.complete(user, system=load_prompt("tell_fixer"), effort="low", max_tokens=4000, feature="tell_fix")).strip()
+        out = "\n".join(l.strip().lstrip("-\u2022* ").strip() for l in out.splitlines()) if kind == "bullets" else out
+        if keep_lines and len([l for l in out.splitlines() if l.strip()]) != n_lines:
+            passes += 1
+            continue  # line count drifted; try once more from the same input rather than accept a misaligned list
+        text, passes = out, passes + 1
+        report = scan(text, kind)
+    return text, report, passes
