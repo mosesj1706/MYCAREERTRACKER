@@ -589,7 +589,12 @@ class LearnedIn(BaseModel):
 
 @app.post("/api/plan/learned")
 def plan_learned(body: LearnedIn):
-    p = planner.mark_learned(_profile(), body.skill, body.evidence)
+    p = _profile()
+    plan = planner.load_plan()
+    known = {s.name.lower() for s in p.skills} | {s.skill.lower() for s in (plan.skills if plan else [])}
+    if body.skill.lower() not in known:
+        raise HTTPException(404, f"'{body.skill}' is not in the profile or the learning plan. Use Add to profile for new skills.")
+    p = planner.mark_learned(p, body.skill, body.evidence)
     profile_store.save(p)
     plan = planner.load_plan()
     if plan:

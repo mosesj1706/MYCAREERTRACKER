@@ -12,15 +12,16 @@ from pydantic import BaseModel
 T = TypeVar("T", bound=BaseModel)
 
 _CHARS = {
-    "—": " - ",   # em dash
-    "–": " - ",   # en dash (between words); the digit-range case is fixed up below
-    "‒": "-",     # figure dash
-    "‘": "'", "’": "'", "‚": "'",
-    "“": '"', "”": '"', "„": '"',
-    "…": "...",
-    " ": " ", " ": " ", " ": " ",
-    "​": "", "‌": "", "‍": "", "﻿": "",
-    "•": "-",     # bullet character inside a sentence
+    "\u2014": " - ",   # em dash
+    "\u2013": " - ",   # en dash (between words); the digit-range case is fixed up below
+    "\u2012": "-",     # figure dash
+    "\u2018": "'", "\u2019": "'", "\u201a": "'",
+    "\u201c": '"', "\u201d": '"', "\u201e": '"',
+    "\u2026": "...",
+    "\u00a0": " ", "\u202f": " ", "\u2009": " ",
+    "\u200b": "", "\u200c": "", "\u200d": "", "\ufeff": "",
+    "\u2022": "-",     # bullet character inside a sentence
+    "\u2192": "->", "\u2190": "<-", "\u21d2": "=>",   # arrows
 }
 _TABLE = str.maketrans(_CHARS)
 

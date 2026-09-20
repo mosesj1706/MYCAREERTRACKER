@@ -1,4 +1,5 @@
 """Build, load and save the master profile."""
+import re
 from datetime import date
 from pathlib import Path
 
@@ -53,6 +54,34 @@ def propose_github_merge(profile: Profile, snap: GitHubSnapshot) -> GitHubMerge:
     return plain_model(llm.extract(GitHubMerge, user=user, system=system, effort="high", feature="github_merge"))
 
 
+def _same_point(a: str, b: str) -> bool:
+    """Two sentences saying the same thing in different words (each sync paraphrases the README)."""
+    ta = set(re.findall(r"[a-z0-9]+", a.lower())) - _STOP
+    tb = set(re.findall(r"[a-z0-9]+", b.lower())) - _STOP
+    return bool(ta and tb) and len(ta & tb) / min(len(ta), len(tb)) >= 0.6
+
+
+_STOP = {"the", "a", "an", "and", "or", "of", "to", "in", "on", "at", "by", "for", "with", "is", "are", "was", "so", "that",
+         "this", "it", "as", "from", "per", "readme", "states", "documents"}
+
+
+def add_unique(items: list[str], new: str) -> None:
+    """Append unless an item already makes the same point; then keep whichever says more."""
+    for i, x in enumerate(items):
+        if _same_point(new, x):
+            if len(new) > len(x):
+                items[i] = new
+            return
+    items.append(new)
+
+
+def dedupe(items: list[str]) -> list[str]:
+    out: list[str] = []
+    for x in items:
+        add_unique(out, x)
+    return out
+
+
 def apply_github_merge(profile: Profile, merge: GitHubMerge, snap: GitHubSnapshot) -> Profile:
     """Deterministic rules: evidence is appended, proficiency only ever rises (capped at hands_on
     from GitHub alone), projects are upserted by URL/name, nothing is removed."""
@@ -73,8 +102,7 @@ def apply_github_merge(profile: Profile, merge: GitHubMerge, snap: GitHubSnapsho
         elif PROFICIENCY_RANK[se.proficiency] > PROFICIENCY_RANK[cur.proficiency]:
             cur.proficiency = se.proficiency
         for e in evidence:
-            if e not in cur.evidence:
-                cur.evidence.append(e)
+            add_unique(cur.evidence, e)
 
     for pr in merge.projects:
         if not pr.url or pr.url.lower().rstrip("/") not in repo_urls:
@@ -91,8 +119,7 @@ def apply_github_merge(profile: Profile, merge: GitHubMerge, snap: GitHubSnapsho
             if t not in existing.technologies:
                 existing.technologies.append(t)
         for o in pr.outcomes:
-            if o not in existing.outcomes:
-                existing.outcomes.append(o)
+            add_unique(existing.outcomes, o)
 
     if not profile.personal_info.github:
         profile.personal_info.github = f"https://github.com/{snap.username}"
@@ -131,8 +158,8 @@ def apply_addition(profile: Profile, add: ProfileAddition, merge: ProfileMerge) 
         elif PROFICIENCY_RANK[prof] > PROFICIENCY_RANK[cur.proficiency]:
             changes.append({"skill": cur.name, "from": cur.proficiency, "to": prof})
             cur.proficiency = prof
-        if sk.evidence and sk.evidence not in cur.evidence:
-            cur.evidence.append(sk.evidence)
+        if sk.evidence:
+            add_unique(cur.evidence, sk.evidence)
 
     if merge.certification:
         c = merge.certification
@@ -156,7 +183,8 @@ def apply_addition(profile: Profile, add: ProfileAddition, merge: ProfileMerge) 
             existing.description = pr.description or existing.description
             existing.url = pr.url or existing.url
             existing.technologies += [t for t in pr.technologies if t not in existing.technologies]
-            existing.outcomes += [o for o in pr.outcomes if o not in existing.outcomes]
+            for o in pr.outcomes:
+                add_unique(existing.outcomes, o)
         else:
             profile.projects.append(pr)
     if merge.experience:
@@ -196,6 +224,11 @@ def _month(ym: str | None) -> str:
     return f"{date(int(y), int(m), 1):%b %Y}"
 
 
+def _months_between(a: str, b: str) -> int:
+    (ay, am), (by, bm) = (map(int, a.split("-")), map(int, b.split("-")))
+    return (by - ay) * 12 + (bm - am)
+
+
 def _clip(text: str, limit: int = LINKEDIN_MAX) -> str:
     text = plain(text)
     return text if len(text) <= limit else text[: limit - 4].rsplit("\n", 1)[0] + "..."
@@ -209,11 +242,17 @@ def linkedin_sections(profile: Profile) -> list[dict]:
         head = f"Title: {e.title}\nCompany: {e.company}\nEmployment type: {kind}\nDates: {_month(e.start)} - {_month(e.end)}\nLocation: {e.location or ''}"
         desc = "\n".join(f"- {plain(b)}" for b in e.bullets)
         out.append({"section": "Experience", "label": f"{e.title} · {e.company}", "fields": head, "text": _clip(desc)})
-    guvi = next((ed for ed in profile.education if "GUVI" in ed.institution), None)
-    if guvi:
-        out.append({"section": "Experience", "label": "Career break",
-                    "fields": f"Type: Career break - Professional development\nDates: {guvi.start_year or ''} - {guvi.end_year or ''}",
-                    "text": f"Completed the {guvi.degree} at {guvi.institution}, then self-studied AWS (Solutions Architect - Associate) before returning to full-time freelance work."})
+    # Career break: LinkedIn shows a hole unless the break entry covers the exact months between jobs.
+    jobs = sorted(profile.experience, key=lambda e: e.start)
+    for prev, nxt in zip(jobs, jobs[1:]):
+        if prev.end and _months_between(prev.end, nxt.start) >= 6:
+            study = [ed for ed in profile.education if ed.start_year and ed.end_year and int(prev.end[:4]) <= ed.start_year <= int(nxt.start[:4])]
+            done = "; ".join(f"completed the {ed.degree} at {ed.institution}" for ed in study) or "professional development"
+            certs = [c for c in profile.certifications if c.status == "in_progress"]
+            prep = f", then prepared for {certs[0].name}" if certs else ""
+            out.append({"section": "Experience", "label": "Career break",
+                        "fields": f"Type: Career break - Professional development\nDates: {_month(prev.end)} - {_month(nxt.start)}",
+                        "text": plain(f"{done[0].upper()}{done[1:]}{prep}, before returning to full-time work as {nxt.title.lower()} at {nxt.company}.")})
     for p in profile.projects:
         desc = p.description + ("\n\nOutcomes: " + "; ".join(p.outcomes) if p.outcomes else "") + "\n\nStack: " + ", ".join(p.technologies)
         out.append({"section": "Projects", "label": p.name, "fields": f"Name: {p.name}\nURL: {p.url or '(none)'}", "text": _clip(desc)})
