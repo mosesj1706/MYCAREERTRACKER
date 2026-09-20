@@ -246,8 +246,12 @@ def linkedin_sections(profile: Profile) -> list[dict]:
     jobs = sorted(profile.experience, key=lambda e: e.start)
     for prev, nxt in zip(jobs, jobs[1:]):
         if prev.end and _months_between(prev.end, nxt.start) >= 6:
-            study = [ed for ed in profile.education if ed.start_year and ed.end_year and int(prev.end[:4]) <= ed.start_year <= int(nxt.start[:4])]
-            done = "; ".join(f"completed the {ed.degree} at {ed.institution}" for ed in study) or "professional development"
+            lo, hi = int(prev.end[:4]), int(nxt.start[:4])
+            study = [f"completed the {ed.degree} at {ed.institution}" for ed in profile.education
+                     if ed.start_year and lo <= ed.start_year <= hi]
+            study += [f"completed the {c.name} ({c.issuer})" if c.issuer else f"completed the {c.name}" for c in profile.certifications
+                      if c.status == "completed" and c.year and lo <= c.year <= hi and c.name.lower() not in {ed.degree.lower() for ed in profile.education}]
+            done = "; ".join(study) or "professional development"
             certs = [c for c in profile.certifications if c.status == "in_progress"]
             prep = f", then prepared for {certs[0].name}" if certs else ""
             out.append({"section": "Experience", "label": "Career break",
