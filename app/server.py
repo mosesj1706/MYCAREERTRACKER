@@ -582,6 +582,22 @@ def plan_resources(body: SkillIn):
     return [r.model_dump() for r in planner.find_resources(body.skill, _profile())]
 
 
+class CredentialsIn(BaseModel):
+    skills: list[str] = []   # empty = the current top gaps
+
+
+@app.post("/api/plan/credentials")
+def plan_credentials(body: CredentialsIn):
+    """Free courses/assessments ending in a recognised badge or certificate for the given gap skills."""
+    p = _profile()
+    skills = [s.strip() for s in body.skills if s.strip()]
+    if not skills:
+        skills = [g.skill for g in tracker.aggregate_gaps(1) if g.coverage < 1][:6]
+    if not skills:
+        raise HTTPException(400, "No gap skills yet - analyze a few jobs first, or name the skills.")
+    return {"skills": skills, "credentials": [c.model_dump() for c in planner.find_credentials(skills, p)]}
+
+
 class LearnedIn(BaseModel):
     skill: str
     evidence: str

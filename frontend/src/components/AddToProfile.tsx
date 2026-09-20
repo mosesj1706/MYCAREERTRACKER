@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Award, BookOpen, Briefcase, FolderGit2, RefreshCw, Sparkles } from "lucide-react";
 import { api, type Profile } from "../lib/api";
@@ -28,9 +28,12 @@ const blank = (kind: Kind): Addition => ({ kind, name: "", org: "", url: "", dat
  * is written with the same rules as the GitHub sync: proficiency only rises, a certificate alone is
  * capped at familiar, nothing is removed. Afterwards, tracked applications can be re-scored.
  */
-export default function AddToProfile({ open, onClose }: { open: boolean; onClose: () => void }) {
+export type AdditionInit = Partial<Addition> & { kind: Kind };
+
+export default function AddToProfile({ open, onClose, initial }: { open: boolean; onClose: () => void; initial?: AdditionInit }) {
   const qc = useQueryClient(); const toast = useToast();
-  const [a, setA] = useState<Addition>(blank("certification"));
+  const [a, setA] = useState<Addition>(initial ? { ...blank(initial.kind), ...initial } : blank("certification"));
+  useEffect(() => { if (initial) { setA({ ...blank(initial.kind), ...initial }); setMerge(null); setApplied(null); setRescored(null); } }, [initial]);
   const [merge, setMerge] = useState<Merge | null>(null);
   const [applied, setApplied] = useState<Applied | null>(null);
   const [rescored, setRescored] = useState<Rescored[] | null>(null);

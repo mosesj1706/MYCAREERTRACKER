@@ -284,6 +284,26 @@ class ResourceList(BaseModel):
     resources: list[Resource]
 
 
+class Credential(BaseModel):
+    """A free course or assessment that ends in something you can put on a profile."""
+    title: str
+    url: str
+    issuer: str = Field(description="Who grants the credential, e.g. AWS, Databricks, Kaggle")
+    issuer_tier: Literal["vendor", "platform", "other"] = Field(
+        description="vendor = the company whose product it is (AWS, Databricks, dbt Labs, Astronomer, Snowflake, Confluent, MongoDB); "
+                    "platform = a major learning platform (Kaggle, freeCodeCamp, Microsoft Learn, Google Cloud Skills Boost, HackerRank); other = anything else")
+    credential: Literal["certificate", "badge", "accreditation", "none"] = Field(description="What you receive on completion. 'none' if only knowledge")
+    cost: Literal["free", "free_audit", "paid"] = Field(description="free = course and credential both free; free_audit = content free but the certificate costs; paid = otherwise")
+    skills: list[str] = Field(description="Canonical skill names it covers, matching the candidate's gap list where possible")
+    hours: int | None = Field(default=None, description="Rough time to complete, if stated")
+    why: str = Field(description="One line: what it proves for this candidate's target role")
+    caveat: str | None = Field(default=None, description="What it does not prove, or why it is greyed out")
+
+
+class CredentialList(BaseModel):
+    credentials: list[Credential]
+
+
 class LearningStep(BaseModel):
     title: str
     kind: Literal["read", "watch", "build", "practice"]

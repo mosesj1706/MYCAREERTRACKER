@@ -6,10 +6,57 @@ import anthropic
 
 from app.core import llm
 from app.core.config import DATA_DIR, load_prompt
-from app.core.models import LearningPlan, Profile, Resource, ResourceList, Skill, SkillCategory
+from app.core.models import LearningPlan, Profile, Resource, ResourceList, Skill, SkillCategory, Credential, CredentialList
 from app.core.tracker import SkillDemand
 
 PLAN_PATH = DATA_DIR / "learning_plan.json"
+
+
+# Issuers whose free credentials a recruiter for a cloud/data role will recognise. The search is
+# steered at these; the ranker still classifies whatever comes back and greys out the rest.
+CREDENTIAL_ISSUERS = [
+    "skillbuilder.aws", "aws.amazon.com/training", "aws.amazon.com/education/awseducate", "databricks.com/learn",
+    "learn.getdbt.com", "academy.astronomer.io", "learn.snowflake.com", "developer.confluent.io", "kaggle.com/learn",
+    "freecodecamp.org/learn", "learn.microsoft.com", "cloudskillsboost.google", "learn.mongodb.com", "hackerrank.com/skills-verification",
+]
+
+
+def find_credentials(skills: list[str], profile: Profile) -> list[Credential]:
+    """Free courses and assessments that end in a badge or certificate for the given gap skills.
+    Web search steered at recognised issuers; the ranker classifies cost, credential and issuer
+    tier honestly, and only URLs the search returned are kept."""
+    wanted = ", ".join(skills[:6])
+    issuers = ", ".join(CREDENTIAL_ISSUERS)
+    response = llm.client().messages.create(
+        model=llm.MODEL,
+        max_tokens=6000,
+        tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": 4}],
+        messages=[{"role": "user", "content":
+                   f"Find FREE courses, learning paths or assessments that end in a certificate, badge or accreditation "
+                   f"for these skills: {wanted}. Target role: {profile.target.primary_role}. Search up to four times: "
+                   f"first the vendors' own free training (sites like {issuers}), then 'free certificate' or 'free badge' "
+                   f"plus the skill names. For each result note whether the credential itself is free or only the content. "
+                   f"List everything found with titles and URLs."}],
+        output_config={"effort": "low"},
+    )
+    llm._record("web_search", response.usage)
+    found: dict[str, dict] = {}
+    for block in response.content:
+        if block.type == "web_search_tool_result" and isinstance(block.content, list):
+            for r in block.content:
+                if getattr(r, "type", "") == "web_search_result" and r.url not in found:
+                    found[r.url] = {"title": r.title, "url": r.url}
+    if not found:
+        return []
+    model_notes = "".join(b.text for b in response.content if b.type == "text")
+    results_text = "\n".join(f"- {v['title']} | {v['url']}" for v in found.values())
+    system = load_prompt("credential_ranker").format(target_role=profile.target.primary_role, skills=wanted)
+    user = (f"<search_results>\n{results_text}\n</search_results>\n\n<notes>\n{model_notes}\n</notes>\n\n"
+            f"<candidate_profile_summary>\n{profile.summary}\n</candidate_profile_summary>")
+    ranked = llm.extract(CredentialList, user=user, system=system, effort="low", feature="credentials", tier="basic").credentials
+    order = {("free", "vendor"): 0, ("free", "platform"): 1, ("free", "other"): 2, ("free_audit", "vendor"): 3, ("free_audit", "platform"): 4}
+    ranked = [c for c in ranked if c.url in found]  # hard guarantee: only real URLs
+    return sorted(ranked, key=lambda c: order.get((c.cost, c.issuer_tier), 9))
 
 
 # ---------------------------------------------------------------------------

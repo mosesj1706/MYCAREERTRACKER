@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import AddToProfile, { type AdditionInit } from "../components/AddToProfile";
 import { Link } from "react-router-dom";
 import { clsx } from "clsx";
 import { CheckCircle2, Circle, ExternalLink, FolderTree, Hammer, RefreshCw, Search, Sparkles, Trophy } from "lucide-react";
@@ -73,7 +74,64 @@ export default function Learning() {
 
       <h3 className="font-semibold mt-6 mb-3">Skills</h3>
       <div className="space-y-3">{p.skills.map((s, si) => <SkillCard key={s.skill} s={s} si={si} toggle={toggle} profile={profile.data ?? null} />)}</div>
+
+      <h3 className="font-semibold mt-6 mb-3">Free credentials</h3>
+      <Credentials gapSkills={p.skills.map((s) => s.skill)} />
     </div>
+  );
+}
+
+interface Credential { title: string; url: string; issuer: string; issuer_tier: "vendor" | "platform" | "other"; credential: "certificate" | "badge" | "accreditation" | "none"; cost: "free" | "free_audit" | "paid"; skills: string[]; hours: number | null; why: string; caveat: string | null }
+const COST: Record<Credential["cost"], { label: string; tone: "success" | "warn" | "neutral" }> = { free: { label: "free", tone: "success" }, free_audit: { label: "free to audit · certificate paid", tone: "warn" }, paid: { label: "paid", tone: "neutral" } };
+const TIER: Record<Credential["issuer_tier"], string> = { vendor: "vendor credential", platform: "major platform", other: "unrecognised issuer" };
+
+/**
+ * Free courses and assessments that end in a badge or certificate a recruiter will recognise, for
+ * the plan's gap skills. Anything paid or from an unknown issuer is shown greyed with the reason,
+ * not hidden. "Add to profile" hands a finished one to the addition flow as a course, where a
+ * credential alone is capped at familiar unless a project was built with it.
+ */
+function Credentials({ gapSkills }: { gapSkills: string[] }) {
+  const toast = useToast();
+  const [picked, setPicked] = useState<string[]>(gapSkills.slice(0, 6));
+  const [extra, setExtra] = useState("");
+  const [res, setRes] = useState<Credential[] | null>(null);
+  const [adding, setAdding] = useState<AdditionInit | undefined>();
+  const find = useMutation({ mutationFn: () => api.post<{ skills: string[]; credentials: Credential[] }>("/api/plan/credentials", { skills: picked }), onSuccess: (r) => setRes(r.credentials), onError: (e) => toast("error", (e as Error).message) });
+  const toggleSkill = (s: string) => setPicked((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
+  const good = (c: Credential) => c.cost === "free" && c.issuer_tier !== "other" && c.credential !== "none";
+  return (
+    <Card className="p-5">
+      <p className="text-[13px] text-muted">Courses and assessments that are free end to end and issue a badge or certificate from the vendor or a major platform. Worth having as a line under a project, not instead of one: on the profile a credential alone counts as <em>familiar</em>.</p>
+      <div className="flex flex-wrap items-center gap-1.5 mt-3">
+        {[...new Set([...gapSkills, ...picked])].map((s) => <button key={s} onClick={() => toggleSkill(s)} className={clsx("rounded-full border px-2.5 py-0.5 text-[12.5px] transition", picked.includes(s) ? "border-accent bg-accent-soft text-accent" : "border-border text-muted hover:text-text")}>{s}</button>)}
+        <Input value={extra} onChange={(e) => setExtra(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && extra.trim()) { setPicked((p) => [...p, extra.trim()]); setExtra(""); } }} placeholder="+ another skill, Enter" className="h-7 w-44 text-[12.5px]" />
+        <Button size="sm" variant="primary" loading={find.isPending} disabled={picked.length === 0} onClick={() => find.mutate()}><Search className="size-3.5" /> {find.isPending ? "Searching (1–2 min)…" : res ? "Search again" : "Find free credentials"}</Button>
+      </div>
+      {res && res.length === 0 && <p className="text-[13px] text-muted mt-3">Nothing free and recognised came back for those skills. Try fewer skills at a time.</p>}
+      {res && res.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {res.map((c) => (
+            <div key={c.url} className={clsx("rounded-lg border border-border px-4 py-3", good(c) ? "bg-surface-2/60" : "opacity-60")}>
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="min-w-0">
+                  <a href={c.url} target="_blank" rel="noreferrer" className="text-[13.5px] font-medium hover:underline">{c.title}</a>
+                  <div className="text-[12.5px] text-muted mt-0.5">{c.issuer} · {TIER[c.issuer_tier]} · {c.credential}{c.hours ? ` · ~${c.hours}h` : ""}</div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Badge tone={COST[c.cost].tone}>{COST[c.cost].label}</Badge>
+                  {good(c) && <Button size="sm" onClick={() => setAdding({ kind: "course", name: c.title, org: c.issuer, url: c.url, description: `${c.why} Covers: ${c.skills.join(", ")}.` })}>Done → Add to profile</Button>}
+                </div>
+              </div>
+              <div className="text-[13px] mt-1.5">{c.why}</div>
+              {c.caveat && <div className="text-[12.5px] text-warn mt-1">{c.caveat}</div>}
+              <div className="flex flex-wrap gap-1 mt-2">{c.skills.map((s) => <Badge key={s}>{s}</Badge>)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <AddToProfile open={!!adding} onClose={() => setAdding(undefined)} initial={adding} />
+    </Card>
   );
 }
 
