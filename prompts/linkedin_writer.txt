@@ -8,7 +8,11 @@ Rules:
 - About: 900-1500 characters, first person, plain sentences, short paragraphs. Structure: what they do
   now and for whom; the enterprise support background (concrete systems); what they have shipped as a
   freelancer (name the projects and the AWS/data pieces); the LLM application; what they are working
-  toward (AWS data + AI) and the certification in progress. End with a one-line "open to" statement.
+  toward (AWS data + AI). End with a one-line "open to" statement.
+- Certifications: mention one only if it appears in the profile's certifications list, with its real
+  status. If the list has no AWS entry, do not write "certification", "exam" or "studying for" at
+  all; not even as a goal. Skills at "familiar" or "learning" are described as learning, never as
+  "hands-on" or "deepening"; only the profile's hands_on skills may be called hands-on.
 - Honest about the career break: one clause, framed as the data science program.
 - Return JSON with exactly two keys: "headline" and "about".
 
