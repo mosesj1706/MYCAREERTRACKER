@@ -4,7 +4,7 @@ from pathlib import Path
 
 from app.core import llm
 from app.core.config import PROFILE_PATH, load_prompt
-from app.core.models import GitHubMerge, LinkedInCopy, Profile, ProfileAddition, ProfileMerge, Skill
+from app.core.models import GitHubMerge, LinkedInCopy, Profile, ProfileAddition, ProfileMerge, RiskFlags, Skill
 from app.core.text import plain, plain_model
 from connectors.github import GitHubSnapshot
 from connectors.resume_pdf import extract_text
@@ -173,6 +173,16 @@ def apply_addition(profile: Profile, add: ProfileAddition, merge: ProfileMerge) 
     resolved = set(merge.resolved_risk_flags)
     profile.risk_flags = [f for f in profile.risk_flags if f not in resolved]
     return profile, changes
+
+
+def refresh_risk_flags(profile: Profile, github_notes: list[str] | None = None) -> list[str]:
+    """Re-derive 'what a recruiter will probe' from the profile as it is now. The list written at
+    build time goes stale as certifications complete and projects land."""
+    system = load_prompt("risk_flags").format(target_role=profile.target.primary_role, today=date.today().isoformat())
+    notes = "\n".join(f"- {n}" for n in (github_notes or []))
+    user = (f"<candidate_profile>\n{profile.model_dump_json(indent=1, exclude={'risk_flags'})}\n</candidate_profile>"
+            + (f"\n\n<github_notes>\n{notes}\n</github_notes>" if notes else ""))
+    return plain_model(llm.extract(RiskFlags, user=user, system=system, effort="medium", feature="risk_flags")).risk_flags
 
 
 # ----------------------------------------------------------------------------- LinkedIn export

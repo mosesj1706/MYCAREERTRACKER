@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clsx } from "clsx";
-import { Plus, Download, FileUp, Flag, Link2, MapPin, Save, Sparkles } from "lucide-react";
+import { RefreshCw, Plus, Download, FileUp, Flag, Link2, MapPin, Save, Sparkles } from "lucide-react";
 import { api, type Profile } from "../lib/api";
 import { Badge, Button, Card, CardHeader, Input, PageHeader, Skeleton, Textarea } from "../components/ui";
 import { useToast } from "../components/Toast";
@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const [json, setJson] = useState<string | null>(null);
   const [linkedin, setLinkedin] = useState(false);
   const [adding, setAdding] = useState(false);
+  const refreshFlags = useMutation({ mutationFn: () => api.post<Profile>("/api/profile/risk-flags/refresh"), onSuccess: (p) => { qc.setQueryData(["profile"], p); toast("success", "Probe list refreshed from the current profile."); }, onError: (e) => toast("error", (e as Error).message) });
   const build = useMutation({
     mutationFn: async () => { const fd = new FormData(); if (file) fd.append("file", file); const r = await fetch(`/api/profile/build?target_role=${encodeURIComponent(role)}`, { method: "POST", body: fd }); if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText); return r.json() as Promise<Profile>; },
     onSuccess: (p) => { qc.setQueryData(["profile"], p); qc.invalidateQueries(); toast("success", "Profile built."); }, onError: (e) => toast("error", (e as Error).message),
@@ -95,7 +96,7 @@ export default function ProfilePage() {
           <GitHubCard />
           <Card className="p-4"><TellCheck url="/api/profile/tells" compact onApplied={() => qc.invalidateQueries({ queryKey: ["profile"] })} /></Card>
           <Card>
-            <CardHeader title="What a recruiter will probe" subtitle="Rehearse answers for each" />
+            <CardHeader title="What a recruiter will probe" subtitle="Rehearse answers for each" action={<Button size="sm" loading={refreshFlags.isPending} onClick={() => refreshFlags.mutate()} title="Re-derive from the profile as it is now. One model call."><RefreshCw className="size-3.5" /> Refresh</Button>} />
             <ul className="px-5 pb-5 space-y-2.5">{p.risk_flags.map((r, i) => <li key={i} className="flex gap-2 text-[13px] text-muted"><Flag className="size-3.5 mt-0.5 shrink-0 text-warn" />{r}</li>)}</ul>
           </Card>
           <Card>

@@ -3,6 +3,9 @@
     uvicorn app.server:app --port 8765
 """
 import json
+import os
+import threading
+import time
 import uuid
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -23,6 +26,26 @@ from learning_engine import planner
 
 app = FastAPI(title="MYCAREERTRACKER API")
 STATIC = ROOT / "frontend" / "dist"
+
+
+def _watch_parent() -> None:
+    """When launched by app.desktop, exit as soon as that process is gone (it may have been
+    force-quit, which skips its atexit hook). Nothing to do when run directly via uvicorn/run.sh."""
+    ppid = int(os.environ.get("MCT_PARENT_PID") or 0)
+    if not ppid:
+        return
+
+    def loop():
+        while True:
+            time.sleep(2)
+            try:
+                os.kill(ppid, 0)
+            except OSError:
+                os._exit(0)
+    threading.Thread(target=loop, daemon=True, name="parent-watch").start()
+
+
+_watch_parent()
 
 
 def _profile() -> Profile:
@@ -100,6 +123,16 @@ def profile_addition_apply(body: AdditionApply):
     profile_store.save(p)
     return {"profile": get_profile(), "changes": changes, "resolved_risk_flags": body.merge.resolved_risk_flags,
             "applications": len([a for a in tracker.list_all() if a.status not in ("rejected",)])}
+
+
+@app.post("/api/profile/risk-flags/refresh")
+def profile_risk_flags_refresh():
+    """Re-derive the recruiter probe list from the current profile (one model call)."""
+    p = _profile()
+    snap = github.load_snapshot()
+    p.risk_flags = profile_store.refresh_risk_flags(p, snap.notes if snap else None)
+    profile_store.save(p)
+    return get_profile()
 
 
 @app.get("/api/profile/linkedin")

@@ -4,6 +4,8 @@ frontend), show it in a native window, and stop the server when the window close
     python -m app.desktop
 """
 import atexit
+import os
+import signal
 import socket
 import subprocess
 import sys
@@ -29,9 +31,17 @@ def start_server() -> subprocess.Popen | None:
     proc = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "app.server:app", "--host", "127.0.0.1", "--port", str(PORT), "--log-level", "warning"],
         cwd=ROOT, stdout=open(LOG, "w"), stderr=subprocess.STDOUT,
-        env={"PYTHONPATH": str(ROOT), "PATH": "/usr/bin:/bin", "HOME": str(ROOT.home())},
+        # MCT_PARENT_PID: the server exits on its own when this process dies (see app.server),
+        # so a force-quit or Cmd-Q never leaves a stale server holding the port.
+        env={"PYTHONPATH": str(ROOT), "PATH": "/usr/bin:/bin", "HOME": str(ROOT.home()), "MCT_PARENT_PID": str(os.getpid())},
     )
     atexit.register(proc.terminate)
+
+    def _stop(signum, frame):  # atexit does not run on SIGTERM; Dock "Quit" and pkill send it
+        proc.terminate()
+        sys.exit(0)
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
     for _ in range(100):
         if port_open():
             return proc

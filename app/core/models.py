@@ -133,6 +133,10 @@ class GitHubMerge(BaseModel):
     notes: list[str] = Field(default_factory=list, description="Anything notable a recruiter would see on this GitHub, good or bad")
 
 
+class RiskFlags(BaseModel):
+    risk_flags: list[str]
+
+
 # ---------------------------------------------------------------------------
 # Adding to the profile: a certification, course, project or job
 # ---------------------------------------------------------------------------
