@@ -9,19 +9,24 @@ i.e. how surprising the text is, normalised by how surprising the observer finds
 own predictions. Model text sits low (predictable relative to the pair); human text sits high.
 The paper reports 90%+ detection at 0.01% false positives with Falcon-7B / Falcon-7B-instruct.
 
-This runs a smaller pair by default (Qwen2.5-1.5B and -Instruct, ~3 GB each, seconds on Apple
-silicon or CPU) so it fits in a laptop tool. The band edges were measured, not copied from the
-paper: scripts/calibrate_detector.py scores 40 pre-ChatGPT self-descriptions from Hacker News
-hiring threads against 20 written by this app's model. Result (Sep 2026, Sonnet 5 text):
+This runs a smaller pair than the paper (Qwen2.5-3B and -Instruct, ~6 GB each; 13 s to load,
+~3 s per text on Apple silicon) so it fits in a laptop tool. The band edges were measured, not
+copied from the paper: scripts/calibrate_detector.py scores 40 pre-ChatGPT self-descriptions
+from Hacker News hiring threads against 20 written by this app's model. Result (Sep 2026,
+Sonnet 5 text):
 
-    human  0.94-1.16, median 1.02
-    model  0.90-1.10, median 1.00     best single threshold: 72% accuracy
+    pair   human range      model range      best single threshold
+    1.5B   0.94-1.16        0.90-1.10        72% accuracy
+    3B     0.93-1.15        0.89-1.19        80% accuracy
 
 That overlap is the honest state of the art for a small pair against a current model. So the
 bands only claim what the data supports: below LOW nothing human scored (model-like), above
 HIGH almost nothing model scored (human-like), and most text lands in between as borderline.
 Generic boilerplate ("passion for data, drive innovation") still scores far below anything
-human (0.76). Short resume bullets are not scored at all.
+human. Short resume bullets are not scored at all.
+
+MCT_DETECTOR_OBSERVER / MCT_DETECTOR_PERFORMER / MCT_DETECTOR_LOW / MCT_DETECTOR_HIGH override
+the pair and the bands (the 1.5B pair with 0.935 / 1.075 is the low-disk option).
 
 Optional: needs `pip install torch transformers`. Without them available() is False and the
 API says so instead of failing.
@@ -32,15 +37,15 @@ from dataclasses import asdict, dataclass
 
 log = logging.getLogger("mct.detector")
 
-OBSERVER = os.getenv("MCT_DETECTOR_OBSERVER", "Qwen/Qwen2.5-1.5B")
-PERFORMER = os.getenv("MCT_DETECTOR_PERFORMER", "Qwen/Qwen2.5-1.5B-Instruct")
+OBSERVER = os.getenv("MCT_DETECTOR_OBSERVER", "Qwen/Qwen2.5-3B")
+PERFORMER = os.getenv("MCT_DETECTOR_PERFORMER", "Qwen/Qwen2.5-3B-Instruct")
 MAX_TOKENS = 512
 MIN_WORDS = 40   # below this the score is noise
 
 # From scripts/calibrate_detector.py. Below LOW nothing human scored; above HIGH almost nothing
 # model scored; between is borderline, where the tell scanner is the better guide.
-LOW = float(os.getenv("MCT_DETECTOR_LOW", "0.935"))
-HIGH = float(os.getenv("MCT_DETECTOR_HIGH", "1.075"))
+LOW = float(os.getenv("MCT_DETECTOR_LOW", "0.923"))
+HIGH = float(os.getenv("MCT_DETECTOR_HIGH", "1.062"))
 
 _models = None
 

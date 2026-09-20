@@ -43,7 +43,7 @@ export function TellCheck({ url, sections, compact }: { url?: string; sections?:
         </div>
         <div className="flex gap-1.5">
           <Button size="sm" loading={busy === "scan"} onClick={() => run(false)}><ScanSearch className="size-3.5" /> Scan</Button>
-          <Button size="sm" variant="secondary" loading={busy === "detector"} onClick={() => run(true)} title="Binoculars score from two local models. First run loads ~6 GB of weights.">+ detector score</Button>
+          <Button size="sm" variant="secondary" loading={busy === "detector"} onClick={() => run(true)} title="Binoculars score from two local models (Qwen2.5-3B pair). First run downloads ~12 GB of weights; each later run takes a few seconds.">+ detector score</Button>
         </div>
       </div>
       {report && report.detector_note && <p className="text-[12px] text-faint">Detector not installed: <code className="num">{report.detector_note}</code></p>}
@@ -53,7 +53,7 @@ export function TellCheck({ url, sections, compact }: { url?: string; sections?:
             <span className="text-[12px] font-medium text-muted">{s.label}</span>
             <div className="flex items-center gap-1.5">
               <Badge tone={tone(s.tells.score)}>{s.tells.label} · {s.tells.score}</Badge>
-              {s.detector && <span title={`Binoculars ${s.detector.score ?? "-"} over ${s.detector.words} words. Measured on 40 pre-2022 human and 20 model self-descriptions: nothing human scored below 0.935, almost nothing model above 1.075. Between is borderline, which is where most text lands; the scan above is the better guide there.`}>
+              {s.detector && <span title={`Binoculars ${s.detector.score ?? "-"} over ${s.detector.words} words. Measured on 40 pre-2022 human and 20 model self-descriptions: nothing human scored below 0.92, almost nothing model above 1.06. Between is borderline, which is where most text lands; the scan above is the better guide there.`}>
                 <Badge tone={bandTone[s.detector.band] ?? "neutral"} className="num">detector: {s.detector.band}{s.detector.score !== null && ` · ${s.detector.score.toFixed(2)}`}</Badge></span>}
             </div>
           </div>
