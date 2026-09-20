@@ -28,7 +28,10 @@ def tailor(profile: Profile, job: JobAnalysis, result: MatchResult, jd_text: str
         f"<job_analysis>\n{job.model_dump_json(indent=1)}\n</job_analysis>\n\n"
         f"<fit_assessment score={result.score()}>\n{result.model_dump_json(indent=1)}\n</fit_assessment>"
     )
-    system = load_prompt("tailor").format(years=profile.total_experience_years())
+    years = profile.total_experience_years()
+    half = round(years * 2) / 2  # 3.1 -> "3", 2.6 -> "2.5": what a person would say
+    years_text = str(int(half)) if half == int(half) else f"{half:.1f}"
+    system = load_prompt("tailor").format(years=years, years_text=years_text)
     out = llm.extract(TailoredOutput, user=user, system=system, cached=profile_block(profile),
                       effort="medium", max_tokens=16000, feature="tailor")
     return plain_model(out)  # this text lands on the resume as written

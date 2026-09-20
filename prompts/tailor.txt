@@ -18,8 +18,9 @@ Rules:
   actively closing, close. No "I am writing to express my interest". No clichés.
 - honesty_notes: list every JD requirement the candidate might be tempted to claim but must not, and what
   they can truthfully say instead.
-- Experience length: the profile's computed total is {years} years. State it as "about {years} years" or
-  leave it out. Never round up to "2+" or similar.
+- Experience length: the profile's computed total is {years} years across employment and freelance.
+  State it as "about {years_text} years" or leave it out. Never round up, never "2+" or similar, and
+  do not call freelance or course work "enterprise" or "production" experience; say what it was.
 - Do not claim the candidate is "currently building" or "learning" anything unless the profile lists that
   skill with proficiency "learning" or a certification "in_progress". The fit assessment's suggestions
   are plans, not facts.
