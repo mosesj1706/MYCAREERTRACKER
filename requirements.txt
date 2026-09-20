@@ -9,3 +9,7 @@ fastapi>=0.115
 uvicorn[standard]>=0.30
 python-multipart>=0.0.9
 pywebview>=5.0
+
+# Optional: local AI-text detector (app/core/detector.py). Not installed by default.
+# torch
+# transformers

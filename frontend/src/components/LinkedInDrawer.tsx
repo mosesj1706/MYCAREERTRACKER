@@ -5,6 +5,7 @@ import { api } from "../lib/api";
 import { Button, Skeleton } from "./ui";
 import { CopyBlock } from "./Copy";
 import { Drawer } from "./Drawer";
+import { TellCheck } from "./TellCheck";
 import { useToast } from "./Toast";
 
 interface Section { section: string; label: string; fields: string; text: string }
@@ -33,6 +34,7 @@ export default function LinkedInDrawer({ open, onClose }: { open: boolean; onClo
           {copy ? <>
             <CopyBlock label={`Headline · ${copy.headline.length}/220`} text={copy.headline} />
             <CopyBlock label={`About · ${copy.about.length}/2600`} text={copy.about} />
+            <TellCheck compact sections={[{ label: "Headline", text: copy.headline }, { label: "About", text: copy.about }]} />
           </> : <p className="text-[12.5px] text-faint">One model call; written for your target role from the profile only.</p>}
         </div>
         {q.isLoading && <Skeleton className="h-40" />}

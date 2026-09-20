@@ -35,6 +35,8 @@ Profile ──► JD match ──► Gaps ──► Learning plan + Mock intervi
 - **Real links only.** The learning resources call uses the `web_search` server tool, collects the URLs the search returned, and has the model rank *those* — anything not in the returned set is dropped.
 - **One model, effort as the dial.** Everything runs on `claude-opus-5`; per-call `effort` (`low` for ranking, `medium` for chat, `high` for matching/tailoring) is the cost/quality lever instead of a model cascade.
 
+- **Reads as your own.** Resume and LinkedIn text go through `app/core/text.py` (keyboard punctuation only) and a shared voice rule (`prompts/voice.txt`); the PDF carries no library name. Then a check you can run on any output (`app/core/tells.py`): a deterministic scan that names the sentence and the reason (post-2022 excess vocabulary, connective openers, rule-of-three padding, self-praise clauses, even sentence rhythm) plus, optionally, the [Binoculars](https://arxiv.org/abs/2401.12070) score computed locally by a Qwen2.5-1.5B base/instruct pair (`app/core/detector.py`; `pip install torch transformers`, ~6 GB of weights on first use). The bands are calibrated on this app's own text, not the paper's Falcon thresholds. In that calibration the score mostly separates generic prose ("passion for data", 0.76) from specific prose (the app's tailored output, 1.07-1.21, more human-like than the original resume) - which is the axis recruiters and commercial detectors respond to. Short resume bullets are deliberately not scored: every detector is unreliable there.
+
 ## Stack
 
 **Backend:** Python 3.14 · FastAPI + uvicorn · SQLite (no ORM, JSON columns hold the Pydantic objects) · Pydantic v2 · Anthropic SDK · pypdf · pywebview (native window)

@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.core import analytics, interview, profile as profile_store, resume, tracker, usage
+from app.core import analytics, detector, interview, profile as profile_store, resume, tells, tracker, usage
 from app.core.config import DATA_DIR, ROOT
 from app.core.matcher import analyze_jd, match, tailor
 from app.core.models import JobAnalysis, LearningPlan, MatchResult, MCQ, Profile, TailoredOutput
@@ -104,6 +104,58 @@ def application_resume_pdf(app_id: int):
     p = _profile()
     slug = "".join(ch if ch.isalnum() else "_" for ch in (a.company or a.title))[:40]
     return _pdf_response(resume.build_pdf(p, a.tailored, a.title), f"{p.personal_info.name.replace(' ', '_')}_Resume_{slug}.pdf")
+
+
+# ----------------------------------------------------------------------------- AI-tell check
+class TellSection(BaseModel):
+    label: str
+    text: str
+    kind: str = "prose"   # "prose" | "bullets"
+
+
+class TellRequest(BaseModel):
+    sections: list[TellSection]
+    detector: bool = False
+
+
+def _check(sections: list[TellSection], use_detector: bool) -> dict:
+    out = []
+    for sec in sections:
+        row: dict[str, Any] = {"label": sec.label, "kind": sec.kind, "tells": tells.scan(sec.text, sec.kind).as_dict(), "detector": None}
+        if use_detector and detector.available() and sec.kind == "prose":
+            row["detector"] = detector.score(sec.text).as_dict()
+        out.append(row)
+    return {"sections": out, "detector_available": detector.available(),
+            "detector_note": None if detector.available() else "pip install torch transformers  (adds the Binoculars score)"}
+
+
+@app.post("/api/tells")
+def tells_check(req: TellRequest):
+    """Scan any text for the things that make it read as model-written. Optional Binoculars score (local models)."""
+    return _check(req.sections, req.detector)
+
+
+@app.get("/api/profile/tells")
+def profile_tells(detector_on: bool = False):
+    p = _profile()
+    secs = [TellSection(label="Summary", text=p.summary),
+            TellSection(label="Experience bullets", text="\n".join(b for e in p.experience for b in e.bullets), kind="bullets"),
+            TellSection(label="Project descriptions", text="\n\n".join(pr.description for pr in p.projects))]
+    return _check(secs, detector_on)
+
+
+@app.get("/api/applications/{app_id}/tells")
+def application_tells(app_id: int, detector_on: bool = False):
+    a = tracker.get(app_id)
+    if a is None:
+        raise HTTPException(404, "Application not found")
+    if a.tailored is None:
+        raise HTTPException(400, "This application has no tailored output yet - run Tailor first.")
+    t = a.tailored
+    secs = [TellSection(label="Tailored summary", text=t.summary),
+            TellSection(label="Rewritten bullets", text="\n".join(b.rewritten for b in t.bullets), kind="bullets"),
+            TellSection(label="Cover letter", text=t.cover_letter)]
+    return _check(secs, detector_on)
 
 
 @app.get("/api/usage")

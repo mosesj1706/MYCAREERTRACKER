@@ -7,6 +7,7 @@ import { Badge, Button, Card, CardHeader, Input, PageHeader, Skeleton, Textarea 
 import { useToast } from "../components/Toast";
 import GitHubCard from "../components/GitHubCard";
 import LinkedInDrawer from "../components/LinkedInDrawer";
+import { TellCheck } from "../components/TellCheck";
 
 const PROF: Record<string, { label: string; tone: "success" | "accent" | "warn" | "neutral" }> = {
   expert: { label: "Expert", tone: "success" }, hands_on: { label: "Hands-on", tone: "success" }, familiar: { label: "Familiar", tone: "warn" }, learning: { label: "Learning", tone: "neutral" },
@@ -89,6 +90,7 @@ export default function ProfilePage() {
         </div>
         <div className="space-y-4">
           <GitHubCard />
+          <Card className="p-4"><TellCheck url="/api/profile/tells" compact /></Card>
           <Card>
             <CardHeader title="What a recruiter will probe" subtitle="Rehearse answers for each" />
             <ul className="px-5 pb-5 space-y-2.5">{p.risk_flags.map((r, i) => <li key={i} className="flex gap-2 text-[13px] text-muted"><Flag className="size-3.5 mt-0.5 shrink-0 text-warn" />{r}</li>)}</ul>
