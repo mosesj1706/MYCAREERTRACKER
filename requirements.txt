@@ -8,7 +8,7 @@ google-genai>=1.0
 fastapi>=0.115
 uvicorn[standard]>=0.30
 python-multipart>=0.0.9
-pywebview>=5.0
+pywebview>=5.0; sys_platform == "darwin"  # native window for the Mac app only
 
 # Optional: local AI-text detector (app/core/detector.py). Not installed by default.
 # torch

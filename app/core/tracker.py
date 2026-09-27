@@ -1,6 +1,7 @@
 """Application pipeline + cross-JD gap analysis."""
+import json
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.core import db
 from app.core.models import JobAnalysis, MatchResult, TailoredOutput
@@ -30,9 +31,12 @@ class Application:
     job: JobAnalysis
     match: MatchResult
     tailored: TailoredOutput | None
+    country: str | None = None       # country-pack code, e.g. "AE" (OT)
+    agency: dict = field(default_factory=dict)  # recruitment agency: name, mea_registration, contact, fee_asked, notes
 
     @classmethod
     def from_row(cls, r) -> "Application":
+        keys = r.keys()
         return cls(
             id=r["id"], company=r["company"], title=r["title"], url=r["url"], status=r["status"],
             match_score=r["match_score"], notes=r["notes"] or "", created_at=r["created_at"],
@@ -40,18 +44,21 @@ class Application:
             job=JobAnalysis.model_validate_json(r["job_json"]),
             match=MatchResult.model_validate_json(r["match_json"]),
             tailored=TailoredOutput.model_validate_json(r["tailored_json"]) if r["tailored_json"] else None,
+            country=r["country"] if "country" in keys else None,
+            agency=json.loads(r["agency_json"]) if "agency_json" in keys and r["agency_json"] else {},
         )
 
 
 def add(job: JobAnalysis, match: MatchResult, jd_text: str, url: str | None = None,
-        tailored: TailoredOutput | None = None, company: str | None = None, title: str | None = None) -> int:
+        tailored: TailoredOutput | None = None, company: str | None = None, title: str | None = None,
+        country: str | None = None) -> int:
     db.init()
     with db.connect() as conn:
         cur = conn.execute(
-            "INSERT INTO applications (company, title, url, jd_text, match_score, job_json, match_json, tailored_json) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO applications (company, title, url, jd_text, match_score, job_json, match_json, tailored_json, country) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (company or job.company, title or job.title, url, jd_text, match.score(),
-             job.model_dump_json(), match.model_dump_json(), tailored.model_dump_json() if tailored else None),
+             job.model_dump_json(), match.model_dump_json(), tailored.model_dump_json() if tailored else None, country),
         )
         conn.execute("INSERT INTO status_history (application_id, status) VALUES (?, 'saved')", (cur.lastrowid,))
         return cur.lastrowid
@@ -77,7 +84,9 @@ def set_status(app_id: int, status: str) -> None:
 
 
 def update(app_id: int, **fields) -> None:
-    allowed = {"company", "title", "url", "notes"}
+    allowed = {"company", "title", "url", "notes", "country", "agency_json"}
+    if "agency" in fields:
+        fields["agency_json"] = json.dumps(fields.pop("agency"))
     fields = {k: v for k, v in fields.items() if k in allowed}
     if not fields:
         return
@@ -93,6 +102,7 @@ def delete(app_id: int) -> None:
 
 
 def get(app_id: int) -> Application | None:
+    db.init()
     with db.connect() as conn:
         row = conn.execute("SELECT * FROM applications WHERE id=?", (app_id,)).fetchone()
     return Application.from_row(row) if row else None
@@ -128,6 +138,7 @@ class SkillDemand:
     partial: int
     none: int
     pressure: float      # weighted "how much this gap is costing you"; 0 = fully covered
+    category: str = ""   # the requirement's category in the JD (first seen), e.g. "credentials"
 
     @property
     def coverage(self) -> float:
@@ -136,11 +147,13 @@ class SkillDemand:
 
 def aggregate_gaps(min_jobs: int = 1) -> list[SkillDemand]:
     apps = list_all()
-    acc: dict[str, dict] = defaultdict(lambda: {"jobs": 0, "must_have": 0, "strong": 0, "partial": 0, "none": 0, "pressure": 0.0})
+    acc: dict[str, dict] = defaultdict(lambda: {"jobs": 0, "must_have": 0, "strong": 0, "partial": 0, "none": 0, "pressure": 0.0, "category": ""})
     for a in apps:
         w_stage = STAGE_WEIGHT.get(a.status, 1.0)
+        cats = {r.skill: r.category for r in a.job.requirements}
         for m in a.match.matches:
             d = acc[m.skill]
+            d["category"] = d["category"] or cats.get(m.skill, "")
             d["jobs"] += 1
             d["must_have"] += m.importance == "must_have"
             d[m.strength] += 1

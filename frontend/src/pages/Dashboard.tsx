@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Briefcase, Send, Reply, Percent, MessagesSquare, BrainCircuit, Flag, Sparkles } from "lucide-react";
-import { api, type Analytics, type Application, type Gap, type LearningPlan, type Profile } from "../lib/api";
+import { ArrowRight, Briefcase, Send, Reply, Percent, MessagesSquare, BrainCircuit, Flag, Sparkles, Globe2, FileWarning } from "lucide-react";
+import { api, type Analytics, type Application, type CountriesPayload, type DocumentsPayload, type Gap, type LearningPlan, type Profile } from "../lib/api";
+import { flag, label, usePack } from "../lib/pack";
 import { Button, Card, CardHeader, Empty, Gauge, PageHeader, Progress, Skeleton, Stat, Badge } from "../components/ui";
 import { WeeklyActivity, Funnel, McqTrend } from "../components/charts";
 import SpendCard from "../components/SpendCard";
@@ -15,6 +16,9 @@ export default function Dashboard() {
   const apps = useQuery({ queryKey: ["applications"], queryFn: () => api.get<{ items: Application[] }>("/api/applications") });
   const gaps = useQuery({ queryKey: ["gaps", 1], queryFn: () => api.get<Gap[]>("/api/gaps?min_jobs=1") });
   const plan = useQuery({ queryKey: ["plan"], queryFn: () => api.get<LearningPlan | null>("/api/plan") });
+  const pack = usePack(); const ot = pack.key === "ot";
+  const ctry = useQuery({ queryKey: ["countries"], queryFn: () => api.get<CountriesPayload>("/api/countries"), enabled: ot });
+  const docs = useQuery({ queryKey: ["documents"], queryFn: () => api.get<DocumentsPayload>("/api/documents"), enabled: ot });
 
   if (profile.isSuccess && !profile.data) {
     return <Empty icon={<Sparkles className="size-8" />} title="Let's build your profile first" body="Everything here is computed from your profile. Upload your resume and set a target role." action={<Link to="/profile"><Button variant="primary">Go to Profile <ArrowRight className="size-4" /></Button></Link>} />;
@@ -29,7 +33,7 @@ export default function Dashboard() {
   return (
     <div>
       <PageHeader title={p ? `Good to see you, ${p.personal_info.name.split(" ")[0]}` : "Dashboard"}
-        subtitle={p ? <>Targeting <span className="text-text font-medium">{p.target.primary_role}</span> · {p.hands_on} hands-on skills · {p.years} yrs experience</> : undefined}
+        subtitle={p ? <>Targeting <span className="text-text font-medium">{p.target.primary_role}</span> · {p.hands_on} {pack.proficiency_labels.hands_on.toLowerCase()} skills · {p.years} yrs {ot ? "post-qualification" : "experience"}</> : undefined}
         actions={<Link to="/tailor"><Button variant="primary"><Target className="size-4" /> Analyze a job</Button></Link>} />
 
       <motion.div {...fade} className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -40,6 +44,8 @@ export default function Dashboard() {
           <Stat label="Practice" value={k.interviews} icon={<MessagesSquare className="size-5" />} hint={k.mcq_accuracy == null ? "no MCQs yet" : `MCQ accuracy ${k.mcq_accuracy}% (${k.mcq_answered})`} />
         </> : [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[92px]" />)}
       </motion.div>
+
+      {ot && <LicenceRow ctry={ctry.data} docs={docs.data} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
         <motion.div {...fade} transition={{ delay: 0.05 }} className="lg:col-span-2">
@@ -88,7 +94,7 @@ export default function Dashboard() {
           <Card className="px-5 py-4">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <div className="text-[12px] font-medium text-muted uppercase tracking-wider">Portfolio project</div>
+                <div className="text-[12px] font-medium text-muted uppercase tracking-wider">{label(pack, "portfolio_project", "Portfolio project")}</div>
                 <div className="font-semibold truncate mt-0.5">{pp.name} <span className="text-muted font-normal">· {plan.data!.weeks_to_complete} wks @ {plan.data!.weekly_hours_assumed}h</span></div>
               </div>
               <div className="num text-sm text-muted shrink-0">{milestonesDone}/{pp.milestones.length} milestones</div>
@@ -105,10 +111,10 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-        <motion.div {...fade} transition={{ delay: 0.3 }}><Card><CardHeader title="MCQ accuracy" subtitle="Weekly, from the interview playground" /><div className="px-3 pb-3">{analytics.data ? (analytics.data.mcq_trend.length ? <McqTrend rows={analytics.data.mcq_trend} /> : <div className="text-sm text-muted px-2 pb-3 flex items-center gap-2"><BrainCircuit className="size-4" /> Answer some quick-fire questions to see a trend.</div>) : <Skeleton className="h-[200px]" />}</div></Card></motion.div>
+        <motion.div {...fade} transition={{ delay: 0.3 }}><Card><CardHeader title={ot ? "Exam practice accuracy" : "MCQ accuracy"} subtitle={ot ? "Weekly, from interview practice" : "Weekly, from the interview playground"} /><div className="px-3 pb-3">{analytics.data ? (analytics.data.mcq_trend.length ? <McqTrend rows={analytics.data.mcq_trend} /> : <div className="text-sm text-muted px-2 pb-3 flex items-center gap-2"><BrainCircuit className="size-4" /> Answer some quick-fire questions to see a trend.</div>) : <Skeleton className="h-[200px]" />}</div></Card></motion.div>
         <motion.div {...fade} transition={{ delay: 0.35 }}>
           <Card>
-            <CardHeader title="What a recruiter will probe" subtitle="From your profile — rehearse these" />
+            <CardHeader title={label(pack, "probe", "What a recruiter will probe")} subtitle="From your profile — rehearse these" />
             <div className="px-5 pb-5 space-y-2">
               {p?.risk_flags.slice(0, 4).map((r, i) => (
                 <div key={i} className="flex gap-2.5 text-[13px] text-muted"><Flag className="size-3.5 mt-0.5 shrink-0 text-warn" /><span>{r}</span></div>
@@ -124,3 +130,42 @@ export default function Dashboard() {
   );
 }
 function Target(props: { className?: string }) { return <Send {...props} />; }
+
+/** OT: progress on each tracked licence route, and documents that expire soon. */
+function LicenceRow({ ctry, docs }: { ctry?: CountriesPayload; docs?: DocumentsPayload }) {
+  const expiring = (docs?.documents ?? []).filter((d) => d.days_left != null && d.days_left <= 60).sort((a, b) => a.days_left! - b.days_left!);
+  const missing = (docs?.checklist ?? []).filter((c) => c.have.length === 0).length;
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+      <motion.div {...fade} className="lg:col-span-2">
+        <Card className="h-full">
+          <CardHeader title="Licence progress" subtitle={ctry?.summaries.length ? "Your next step on each route" : "Pick where you want to work"} action={<Link to="/countries" className="text-[13px] text-accent hover:underline">Countries & licence →</Link>} />
+          <div className="px-5 pb-5 space-y-3">
+            {!ctry ? <Skeleton className="h-16" /> : ctry.summaries.length === 0 ? (
+              <div className="text-sm text-muted flex items-center gap-2"><Globe2 className="size-4" /> Choose a country to get its licence checklist, CV style and interview practice.</div>
+            ) : ctry.summaries.map((s) => (
+              <div key={s.route_id} className="flex items-center gap-3">
+                <span className="text-xl leading-none">{flag(s.country)}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium truncate">{s.regulator}{s.area ? ` · ${s.area}` : ""}</span><span className="num text-[12px] text-muted shrink-0">{s.done}/{s.total}</span></div>
+                  <Progress value={(100 * s.done) / Math.max(1, s.total)} tone="success" className="mt-1.5" />
+                  {s.next && s.total > 0 && <div className="text-[12px] text-muted mt-1">Next: <span className="text-text">{s.next.title}</span>{s.next.status === "in_progress" ? " (in progress)" : ""}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </motion.div>
+      <motion.div {...fade} transition={{ delay: 0.05 }}>
+        <Card className="h-full">
+          <CardHeader title="Documents" subtitle={docs ? `${docs.documents.length} stored${docs.checklist.length ? ` · ${missing} still needed` : ""}` : undefined} action={<Link to="/documents" className="text-[13px] text-accent hover:underline">Open →</Link>} />
+          <div className="px-5 pb-5 space-y-2 text-[13px]">
+            {expiring.length === 0 ? <div className="text-muted">Nothing expiring in the next 60 days.</div> : expiring.slice(0, 4).map((d) => (
+              <div key={d.id} className="flex items-center gap-2"><FileWarning className={d.days_left! < 0 ? "size-4 text-danger shrink-0" : "size-4 text-warn shrink-0"} /><span className="truncate flex-1">{d.title}</span><span className="num text-[12px] text-muted shrink-0">{d.days_left! < 0 ? "expired" : `${d.days_left} d`}</span></div>
+            ))}
+          </div>
+        </Card>
+      </motion.div>
+    </div>
+  );
+}

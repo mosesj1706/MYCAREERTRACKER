@@ -1,23 +1,33 @@
 """Pydantic schemas shared by the whole app. The Profile is the single source of truth
-about Moses; everything else (matching, interviews, learning) reads from it."""
+about the candidate; everything else (matching, interviews, learning) reads from it.
+
+Skill categories and the proficiency wording come from the active profession pack (app/core/pack.py)."""
 from datetime import date
 from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
-SkillCategory = Literal[
-    "cloud", "data_engineering", "programming", "devops", "ml_ai", "databases", "tools", "soft"
-]
+from app.core.pack import CATEGORY_KEYS, PACK
+
+SkillCategory = Literal[CATEGORY_KEYS]  # the pack's categories, e.g. cloud/.../soft or assessments/.../soft
 Proficiency = Literal["learning", "familiar", "hands_on", "expert"]
 
 
+def parse_ym(value: str | None) -> tuple[int, int] | None:
+    """'2023-11' -> (2023, 11). A resume that gives only the year ('2023') -> (2023, 6): the month is
+    unknown, so mid-year neither stretches nor cuts a duration. None or 'Present' -> None."""
+    if not value:
+        return None
+    parts = value.strip().split("-")
+    if not parts[0].isdigit():
+        return None
+    return int(parts[0]), int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 6
+
+
 class Skill(BaseModel):
-    name: str = Field(description="Canonical name, e.g. 'AWS Lambda', 'Python', 'Terraform'")
+    name: str = Field(description=f"Canonical name, {PACK.skill_examples}")
     category: SkillCategory
-    proficiency: Proficiency = Field(
-        description="'learning' = self-described as learning / no evidence; 'familiar' = used lightly or in coursework; "
-        "'hands_on' = used in a job or substantial project; 'expert' = deep, repeated production use"
-    )
+    proficiency: Proficiency = Field(description=PACK.proficiency_desc)
     evidence: list[str] = Field(
         default_factory=list,
         description="Short quotes/paraphrases from experience or projects that prove this skill. Empty if none.",
@@ -75,6 +85,26 @@ class PersonalInfo(BaseModel):
     location: str | None = None
     linkedin: str | None = None
     github: str | None = None
+    # Details some countries expect on a CV (the Gulf, for example). Only what the source states.
+    nationality: str | None = None
+    date_of_birth: str | None = Field(default=None, description="YYYY-MM-DD, only if the source states it")
+    visa_status: str | None = Field(default=None, description="e.g. 'Employment visa required', only if stated")
+    notice_period: str | None = Field(default=None, description="e.g. '1 month', only if stated")
+
+
+class Language(BaseModel):
+    name: str
+    level: Literal["native", "fluent", "professional", "basic"]
+
+
+class Registration(BaseModel):
+    """A professional registration, membership, licence or licensing milestone."""
+    body: str = Field(description="Issuing body, e.g. 'All India Occupational Therapists\' Association', 'Dubai Health Authority'")
+    kind: Literal["registration", "membership", "licence", "exam", "eligibility"]
+    number: str | None = None
+    status: str = Field(description="e.g. 'active', 'passed', 'eligible', 'in progress', 'expired'")
+    year: int | None = None
+    expires: str | None = Field(default=None, description="YYYY-MM if it expires")
 
 
 class Target(BaseModel):
@@ -93,6 +123,8 @@ class Profile(BaseModel):
     education: list[Education]
     certifications: list[Certification]
     courses: list[Course] = Field(default_factory=list)
+    languages: list[Language] = Field(default_factory=list)
+    registrations: list[Registration] = Field(default_factory=list, description="Professional registrations, memberships and licences, with numbers where stated")
     risk_flags: list[str] = Field(
         default_factory=list,
         description="Things a recruiter will probe: employment gaps, title/target mismatch, skills claimed without evidence",
@@ -107,11 +139,18 @@ class Profile(BaseModel):
         return [s for s in self.skills if s.proficiency in levels]
 
     def total_experience_years(self) -> float:
+        """Years across experience entries. The OT pack leaves out internships: regulators count
+        post-qualification experience only."""
         months = 0
+        today = (date.today().year, date.today().month)
         for e in self.experience:
-            sy, sm = map(int, e.start.split("-"))
-            ey, em = map(int, (e.end or date.today().strftime("%Y-%m")).split("-"))
-            months += (ey - sy) * 12 + (em - sm)
+            if PACK.key == "ot" and (e.employment_type or "").lower() == "internship":
+                continue
+            start = parse_ym(e.start)
+            if start is None:
+                continue
+            end = parse_ym(e.end) or today
+            months += max(0, (end[0] - start[0]) * 12 + (end[1] - start[1]))
         return round(months / 12, 1)
 
 
@@ -199,6 +238,10 @@ class JobAnalysis(BaseModel):
     seniority: str = Field(description="junior / mid / senior / lead, inferred from years and language")
     years_required: int | None = Field(default=None, description="Minimum years of experience if stated")
     location: str | None = None
+    country: str | None = Field(default=None, description="Country of the job in English, e.g. 'United Arab Emirates', if stated or clear from the location")
+    licence_required: str | None = Field(default=None, description="Professional licence or registration the job requires, e.g. 'DHA licence or eligibility', if stated")
+    facility_type: str | None = Field(default=None, description="e.g. 'government hospital', 'private hospital', 'rehab centre', 'home care', 'school', if clear")
+    package: list[str] = Field(default_factory=list, description="Salary and benefits stated: salary range, housing, transport, flights, insurance, visa")
     summary: str = Field(description="Two sentences: what this role actually does day to day")
     requirements: list[Requirement]
     red_flags: list[str] = Field(default_factory=list, description="Anything concerning about the posting itself")
@@ -263,6 +306,7 @@ class MCQ(BaseModel):
     options: list[str] = Field(min_length=4, max_length=4)
     answer_index: int = Field(ge=0, le=3)
     explanation: str
+    reference: str | None = Field(default=None, description="Where this is covered: a standard textbook or guideline named by title, or null. Never invent editions or page numbers.")
 
 
 class MCQSet(BaseModel):
@@ -288,10 +332,8 @@ class Credential(BaseModel):
     """A free course or assessment that ends in something you can put on a profile."""
     title: str
     url: str
-    issuer: str = Field(description="Who grants the credential, e.g. AWS, Databricks, Kaggle")
-    issuer_tier: Literal["vendor", "platform", "other"] = Field(
-        description="vendor = the company whose product it is (AWS, Databricks, dbt Labs, Astronomer, Snowflake, Confluent, MongoDB); "
-                    "platform = a major learning platform (Kaggle, freeCodeCamp, Microsoft Learn, Google Cloud Skills Boost, HackerRank); other = anything else")
+    issuer: str = Field(description="Who grants the credential")
+    issuer_tier: Literal["vendor", "platform", "other"] = Field(description=PACK.credential_tier_desc)
     credential: Literal["certificate", "badge", "accreditation", "none"] = Field(description="What you receive on completion. 'none' if only knowledge")
     cost: Literal["free", "free_audit", "paid"] = Field(description="free = course and credential both free; free_audit = content free but the certificate costs; paid = otherwise")
     skills: list[str] = Field(description="Canonical skill names it covers, matching the candidate's gap list where possible")
@@ -342,3 +384,17 @@ class LearningPlan(BaseModel):
     skills: list[SkillPlan]
     weekly_hours_assumed: int
     weeks_to_complete: int
+
+
+# ---------------------------------------------------------------------------
+# Case studies (OT): a de-identified case turned into interview material
+# ---------------------------------------------------------------------------
+
+class CaseStory(BaseModel):
+    situation: str = Field(description="The client and context, de-identified: age band, condition, setting, stage")
+    task: str = Field(description="What the therapist had to achieve and why it was hard")
+    action: str = Field(description="What the therapist did: assessments, goals, interventions, who they worked with")
+    result: str = Field(description="The outcome, with outcome-measure changes where given; honest if partial")
+    resume_bullet: str = Field(description="One resume line: intervention, client group, outcome measure, functional result")
+    interview_questions: list[str] = Field(description="3-5 questions a panel is likely to ask about this case")
+    privacy_notes: list[str] = Field(default_factory=list, description="Anything in the input that could identify the patient, which was left out")

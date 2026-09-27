@@ -22,12 +22,16 @@ def match(profile: Profile, job: JobAnalysis) -> MatchResult:
                        effort="medium", feature="match")
 
 
-def tailor(profile: Profile, job: JobAnalysis, result: MatchResult, jd_text: str) -> TailoredOutput:
+def tailor(profile: Profile, job: JobAnalysis, result: MatchResult, jd_text: str, country: str | None = None) -> TailoredOutput:
+    """`country` (a country-pack code, OT) adds that country's CV norms and her real licence progress."""
     user = (
         f"<job_description>\n{jd_text}\n</job_description>\n\n"
         f"<job_analysis>\n{job.model_dump_json(indent=1)}\n</job_analysis>\n\n"
         f"<fit_assessment score={result.score()}>\n{result.model_dump_json(indent=1)}\n</fit_assessment>"
     )
+    if country:
+        from app.core import countries  # local import: countries -> llm, kept out of the tech path
+        user += "\n\n" + countries.norms_block(country)
     years = profile.total_experience_years()
     half = round(years * 2) / 2  # 3.1 -> "3", 2.6 -> "2.5": what a person would say
     years_text = str(int(half)) if half == int(half) else f"{half:.1f}"

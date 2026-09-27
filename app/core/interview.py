@@ -2,7 +2,7 @@
 import json
 from typing import Iterator
 
-from app.core import db, llm
+from app.core import countries, cpd, db, llm
 from app.core.config import load_prompt
 from app.core.models import MCQ, MCQSet, Profile
 from app.core.tracker import Application
@@ -14,7 +14,7 @@ class InterviewSession:
     system prompt with a cache breakpoint so every turn after the first is mostly cache reads."""
 
     def __init__(self, profile: Profile, mode: str = "mixed", application: Application | None = None,
-                 project: str | None = None):
+                 project: str | None = None, country: str | None = None, case_id: int | None = None):
         self.profile = profile
         self.mode = mode
         self.application = application
@@ -24,6 +24,13 @@ class InterviewSession:
         context = f"<candidate_profile>\n{profile.model_dump_json(indent=1)}\n</candidate_profile>"
         if project:
             context += "\n\n" + project_context(profile, project)
+        if case_id:
+            context += "\n\n" + cpd.case_context(case_id)
+        # Country style (OT): who interviews, what they ask, and her real licence progress.
+        code = country or (application.country if application else None)
+        norms = countries.norms_block(code) if code else ""
+        if norms:
+            context += "\n\n" + norms
         if application:
             context += (
                 f"\n\n<job company={application.company!r}>\n{application.jd_text}\n</job>"
@@ -31,7 +38,7 @@ class InterviewSession:
                 f"{application.match.model_dump_json(indent=1)}\n</fit_assessment>"
             )
         self.system = [
-            {"type": "text", "text": load_prompt("persona_recruiter").format(mode=mode)},
+            {"type": "text", "text": load_prompt("persona_recruiter").format(mode=mode, country=(countries.country(code) or {}).get("name", "the candidate's target country"))},
             {"type": "text", "text": context, "cache_control": {"type": "ephemeral"}},
         ]
 
@@ -77,9 +84,13 @@ def list_sessions() -> list[dict]:
 # MCQs
 # ---------------------------------------------------------------------------
 
-def generate_mcqs(topics: list[str], n: int, target_role: str) -> list[MCQ]:
-    system = load_prompt("mcq_generator").format(target_role=target_role, n=n, topics=", ".join(topics))
-    return llm.extract(MCQSet, user="Generate the questions now.", system=system, effort="low", feature="mcq", tier="basic").questions
+def generate_mcqs(topics: list[str], n: int, target_role: str, exam: str | None = None) -> list[MCQ]:
+    """`exam` names the licensing exam being practised for (OT), e.g. 'DHA licensing exam (Prometric)'."""
+    system = load_prompt("mcq_generator").format(target_role=target_role, n=n, topics=", ".join(topics),
+                                                 exam=exam or "the licensing exam for the target country")
+    # Exam questions stay on Claude even when a free provider handles other basic calls: accuracy matters.
+    return llm.extract(MCQSet, user="Generate the questions now.", system=system, effort="low", feature="mcq",
+                       tier="judgment" if exam else "basic").questions
 
 
 def record_mcq(q: MCQ, correct: bool) -> None:

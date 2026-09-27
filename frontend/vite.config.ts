@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  server: { port: 5173, proxy: { "/api": "http://127.0.0.1:8765" } },
+  // ./run.sh ot dev points the proxy at the OT server on :8766
+  server: { port: 5173, proxy: { "/api": `http://127.0.0.1:${process.env.MCT_API_PORT ?? 8765}` } },
   build: { outDir: "dist", emptyOutDir: true },
 });

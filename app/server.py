@@ -17,7 +17,8 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.core import analytics, detector, interview, profile as profile_store, resume, tells, tracker, usage
+from app import auth
+from app.core import analytics, countries, detector, interview, pack, profile as profile_store, resume, tells, tracker, usage
 from app.core.config import DATA_DIR, ROOT
 from app.core.matcher import analyze_jd, match, tailor
 from app.core.models import JobAnalysis, LearningPlan, MatchResult, MCQ, Profile, ProfileAddition, ProfileMerge, TailoredOutput
@@ -25,6 +26,10 @@ from connectors import github
 from learning_engine import planner
 
 app = FastAPI(title="MYCAREERTRACKER API")
+auth.install(app)  # no-op unless MCT_PASSWORD is set
+if pack.PACK.features["countries"]:
+    from app import ot_routes
+    app.include_router(ot_routes.router)
 STATIC = ROOT / "frontend" / "dist"
 
 
@@ -67,6 +72,18 @@ def _app_dict(a: tracker.Application) -> dict:
     d["match"] = a.match.model_dump() | {"score": a.match.score()}
     d["tailored"] = a.tailored.model_dump() if a.tailored else None
     return d
+
+
+@app.get("/api/pack")
+def get_pack():
+    """Labels, categories and features of the active profession pack; the UI adapts to it."""
+    return pack.public()
+
+
+def _photo_for(code: str | None) -> bool:
+    """CV photo only where the country pack's region expects one (the Gulf)."""
+    c = countries.country(code) if pack.PACK.key == "ot" else None
+    return bool(c and c.get("region") == "gulf")
 
 
 # ----------------------------------------------------------------------------- profile
@@ -153,7 +170,8 @@ def _pdf_response(pdf: bytes, filename: str) -> Response:
 def resume_pdf():
     """Master resume, generated from the profile."""
     p = _profile()
-    return _pdf_response(resume.build_pdf(p), f"{p.personal_info.name.replace(' ', '_')}_Resume.pdf")
+    photo = _photo_for(countries.selection()["primary"]) if pack.PACK.key == "ot" else False
+    return _pdf_response(resume.build_pdf(p, include_photo=photo), f"{p.personal_info.name.replace(' ', '_')}_Resume.pdf")
 
 
 @app.get("/api/applications/{app_id}/resume.pdf")
@@ -164,7 +182,8 @@ def application_resume_pdf(app_id: int):
         raise HTTPException(400, "This application has no tailored output yet - run Tailor first.")
     p = _profile()
     slug = "".join(ch if ch.isalnum() else "_" for ch in (a.company or a.title))[:40]
-    return _pdf_response(resume.build_pdf(p, a.tailored, a.title), f"{p.personal_info.name.replace(' ', '_')}_Resume_{slug}.pdf")
+    return _pdf_response(resume.build_pdf(p, a.tailored, a.title, include_photo=_photo_for(a.country)),
+                         f"{p.personal_info.name.replace(' ', '_')}_Resume_{slug}.pdf")
 
 
 # ----------------------------------------------------------------------------- AI-tell check
@@ -339,7 +358,8 @@ def jd_analyze(body: JDIn):
     p = _profile()
     job = analyze_jd(body.jd_text, p.target.primary_role)
     result = match(p, job)
-    return {"job": job.model_dump(), "match": result.model_dump() | {"score": result.score()}}
+    country = countries.match_country(job.country, job.location) if pack.PACK.key == "ot" else None
+    return {"job": job.model_dump(), "match": result.model_dump() | {"score": result.score()}, "country": country}
 
 
 class TailorIn(BaseModel):
@@ -347,11 +367,12 @@ class TailorIn(BaseModel):
     job: JobAnalysis
     match: MatchResult
     app_id: int | None = None
+    country: str | None = None
 
 
 @app.post("/api/jd/tailor")
 def jd_tailor(body: TailorIn):
-    out = tailor(_profile(), body.job, body.match, body.jd_text)
+    out = tailor(_profile(), body.job, body.match, body.jd_text, country=body.country)
     if body.app_id:
         tracker.save_tailored(body.app_id, out)
     return out.model_dump()
@@ -365,6 +386,7 @@ class TrackIn(BaseModel):
     url: str | None = None
     company: str | None = None
     tailored: TailoredOutput | None = None
+    country: str | None = None
 
 
 @app.get("/api/applications")
@@ -375,7 +397,8 @@ def list_applications():
 
 @app.post("/api/applications")
 def track(body: TrackIn):
-    i = tracker.add(body.job, body.match, body.jd_text, url=body.url, company=body.company, tailored=body.tailored)
+    country = body.country or (countries.match_country(body.job.country, body.job.location) if pack.PACK.key == "ot" else None)
+    i = tracker.add(body.job, body.match, body.jd_text, url=body.url, company=body.company, tailored=body.tailored, country=country)
     return _app_dict(tracker.get(i))
 
 
@@ -390,6 +413,8 @@ class AppPatch(BaseModel):
     title: str | None = None
     url: str | None = None
     notes: str | None = None
+    country: str | None = None
+    agency: dict | None = None   # name, mea_registration, contact, fee_asked, notes
 
 
 @app.patch("/api/applications/{app_id}")
@@ -437,7 +462,7 @@ def rescore_all():
 def application_tailor(app_id: int):
     """Tailor (or re-tailor) a tracked application against the current profile."""
     a = _application(app_id)
-    out = tailor(_profile(), a.job, a.match, a.jd_text)
+    out = tailor(_profile(), a.job, a.match, a.jd_text, country=a.country)
     tracker.save_tailored(app_id, out)
     return _app_dict(tracker.get(app_id))
 
@@ -455,12 +480,17 @@ class InterviewStart(BaseModel):
     app_id: int | None = None
     mode: str = "mixed"
     project: str | None = None
+    country: str | None = None   # OT: whose interview style, and which licence progress to probe
+    case_id: int | None = None   # OT: Case defence
 
 
 @app.post("/api/interview")
 def interview_start(body: InterviewStart):
+    if body.mode == "case" and not body.case_id:
+        raise HTTPException(400, "Pick a case study to defend.")
     try:
-        sess = interview.InterviewSession(_profile(), mode=body.mode, project=body.project,
+        sess = interview.InterviewSession(_profile(), mode=body.mode, project=body.project, country=body.country,
+                                          case_id=body.case_id if body.mode == "case" else None,
                                           application=_application(body.app_id) if body.app_id else None)
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -516,11 +546,21 @@ def interviews():
 class MCQGen(BaseModel):
     topics: list[str]
     n: int = 5
+    exam: str | None = None   # OT: a licence route id, e.g. "ae-dha" -> practise for that regulator's exam
 
 
 @app.post("/api/mcq/generate")
 def mcq_generate(body: MCQGen):
-    return [q.model_dump() for q in interview.generate_mcqs(body.topics, body.n, _profile().target.primary_role)]
+    if not body.topics:
+        raise HTTPException(400, "Pick at least one topic.")
+    exam = None
+    if body.exam:
+        try:
+            _, r = countries.route(body.exam)
+            exam = f"{r['exam_name']} ({r['exam_provider']}), {r['regulator_full']}" if r.get("exam_name") else r["regulator_full"]
+        except KeyError:
+            raise HTTPException(400, "Unknown exam.")
+    return [q.model_dump() for q in interview.generate_mcqs(body.topics, min(max(body.n, 1), 30), _profile().target.primary_role, exam)]
 
 
 class MCQRecord(BaseModel):
@@ -640,7 +680,8 @@ if STATIC.exists():
 
     @app.get("/{path:path}")
     def spa(path: str):
-        target = STATIC / path
-        if path and target.is_file():
+        target = (STATIC / path).resolve()
+        # resolve + containment check: a "../" path must never reach .env or the data directory
+        if path and target.is_file() and target.is_relative_to(STATIC.resolve()):
             return FileResponse(target)
         return FileResponse(STATIC / "index.html")

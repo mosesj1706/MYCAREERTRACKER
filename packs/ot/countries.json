@@ -1,0 +1,232 @@
+{
+  "_about": "Country packs for occupational therapists. Built-in steps are the usual pattern as of September 2026, not legal advice: every route links its regulator, and 'Check current rules' searches the official sites live. Document keys refer to the document categories in app/core/documents.py.",
+  "verified": "2026-09",
+  "regions": {
+    "gulf": {
+      "language_test": "Not usually required for the licence; English is the working language. Arabic basics help with patients.",
+      "cv_norms": [
+        "A professional photo is usual and expected by many employers.",
+        "Put licence status in the header, e.g. 'DHA Prometric passed, eligibility letter valid to 2027-03' or 'DataFlow in progress'.",
+        "Nationality, visa status, notice period and date of birth are common; include only what you are comfortable sharing.",
+        "Two pages is fine. Lead with clinical areas, client groups and outcome measures.",
+        "Name the hospital and department for every job, with dates. Unnamed employers cannot be verified by DataFlow."
+      ],
+      "cover_letter_norms": [
+        "Short: 200 to 250 words, formal, addressed to HR or the recruitment team (or the agency).",
+        "State licence status, availability and notice period in the first paragraph.",
+        "Mention visa status and willingness to relocate.",
+        "Match two or three of their requirements with specific clinical evidence."
+      ],
+      "interview_style": "Usually two rounds. HR or the agency screens first: licence status, notice period, salary expectations and package (housing, transport, annual flight, medical insurance), visa. Then a clinical panel with the rehab lead or a senior OT: case scenarios from the unit's client groups, assessment choices, goal setting, safety and documentation. Many first rounds are video calls; government employers sometimes run recruitment drives in India.",
+      "package_notes": [
+        "Salaries are quoted monthly in local currency. Ask how much is basic salary and how much is allowances; gratuity is usually calculated on basic.",
+        "Check what is included: housing or housing allowance, transport, annual return flight, medical insurance, licence fees, visa costs.",
+        "Ask about working hours, the weekly day off, and shift or weekend work."
+      ],
+      "job_sites": [
+        {"name": "Bayt", "url": "https://www.bayt.com"},
+        {"name": "GulfTalent", "url": "https://www.gulftalent.com"},
+        {"name": "Naukri Gulf", "url": "https://www.naukrigulf.com"},
+        {"name": "LinkedIn Jobs", "url": "https://www.linkedin.com/jobs"}
+      ]
+    }
+  },
+  "countries": [
+    {
+      "code": "AE", "name": "United Arab Emirates", "region": "gulf", "currency": "AED",
+      "summary": "Three regulators: DHA for Dubai, DOH for Abu Dhabi, and MOHAP for Sharjah, Ajman, Umm Al Quwain, Ras Al Khaimah and Fujairah. Pick the emirate you want to work in; the steps are similar.",
+      "extra_job_sites": [{"name": "Indeed UAE", "url": "https://ae.indeed.com"}],
+      "routes": [
+        {
+          "id": "ae-dha", "regulator": "DHA", "regulator_full": "Dubai Health Authority", "area": "Dubai",
+          "portal": "Sheryan (DHA's licensing portal)", "exam_provider": "Prometric", "exam_name": "DHA licensing exam",
+          "official_url": "https://www.dha.gov.ae", "check_domains": ["dha.gov.ae", "dataflowgroup.com", "prometric.com"],
+          "steps": ["eligibility", "home_registration", "account", "dataflow", "exam", "eligibility_letter", "bls", "job_offer", "attestation", "activation"]
+        },
+        {
+          "id": "ae-doh", "regulator": "DOH", "regulator_full": "Department of Health Abu Dhabi", "area": "Abu Dhabi",
+          "portal": "TAMM (Abu Dhabi government services)", "exam_provider": "Pearson VUE", "exam_name": "DOH licensing exam",
+          "official_url": "https://www.doh.gov.ae", "check_domains": ["doh.gov.ae", "tamm.abudhabi", "pearsonvue.com", "dataflowgroup.com"],
+          "steps": ["eligibility", "home_registration", "account", "dataflow", "exam", "eligibility_letter", "bls", "job_offer", "attestation", "activation"]
+        },
+        {
+          "id": "ae-mohap", "regulator": "MOHAP", "regulator_full": "Ministry of Health and Prevention", "area": "Northern emirates",
+          "portal": "MOHAP online services", "exam_provider": "Prometric", "exam_name": "MOHAP licensing exam",
+          "official_url": "https://mohap.gov.ae", "check_domains": ["mohap.gov.ae", "dataflowgroup.com", "prometric.com"],
+          "steps": ["eligibility", "home_registration", "account", "dataflow", "exam", "eligibility_letter", "bls", "job_offer", "attestation", "activation"]
+        }
+      ]
+    },
+    {
+      "code": "SA", "name": "Saudi Arabia", "region": "gulf", "currency": "SAR",
+      "summary": "One regulator, SCFHS, through the Mumaris+ portal. Classification and registration come after the exam; the employer completes the final registration. Some posts are gender-specific.",
+      "extra_job_sites": [{"name": "Indeed Saudi Arabia", "url": "https://sa.indeed.com"}],
+      "routes": [
+        {
+          "id": "sa-scfhs", "regulator": "SCFHS", "regulator_full": "Saudi Commission for Health Specialties", "area": "Saudi Arabia",
+          "portal": "Mumaris+", "exam_provider": "Prometric", "exam_name": "SCFHS classification exam",
+          "official_url": "https://www.scfhs.org.sa", "check_domains": ["scfhs.org.sa", "dataflowgroup.com", "prometric.com"],
+          "steps": ["eligibility", "home_registration", "account", "dataflow", "exam", "classification", "bls", "job_offer", "attestation", "activation"]
+        }
+      ]
+    },
+    {
+      "code": "QA", "name": "Qatar", "region": "gulf", "currency": "QAR",
+      "summary": "The Department of Healthcare Professions (DHP) at the Ministry of Public Health licenses OTs. The application usually goes through the hiring facility, so a job offer often comes before the exam.",
+      "extra_job_sites": [{"name": "Indeed Qatar", "url": "https://qa.indeed.com"}],
+      "routes": [
+        {
+          "id": "qa-dhp", "regulator": "DHP", "regulator_full": "Department of Healthcare Professions, Ministry of Public Health", "area": "Qatar",
+          "portal": "DHP online system (usually submitted by the hiring facility)", "exam_provider": "Prometric", "exam_name": "DHP licensing exam",
+          "official_url": "https://www.moph.gov.qa", "check_domains": ["moph.gov.qa", "dataflowgroup.com", "prometric.com"],
+          "steps": ["eligibility", "home_registration", "job_offer", "account", "dataflow", "exam", "bls", "attestation", "activation"]
+        }
+      ]
+    },
+    {
+      "code": "OM", "name": "Oman", "region": "gulf", "currency": "OMR",
+      "summary": "The Oman Medical Specialty Board (OMSB) runs the licensing exam; the Ministry of Health issues the licence once you have a job offer.",
+      "extra_job_sites": [{"name": "Indeed Oman", "url": "https://om.indeed.com"}],
+      "routes": [
+        {
+          "id": "om-omsb", "regulator": "OMSB / MOH", "regulator_full": "Oman Medical Specialty Board and Ministry of Health", "area": "Oman",
+          "portal": "OMSB online registration", "exam_provider": "Prometric", "exam_name": "OMSB licensing exam",
+          "official_url": "https://www.omsb.gov.om", "check_domains": ["omsb.gov.om", "moh.gov.om", "dataflowgroup.com", "prometric.com"],
+          "steps": ["eligibility", "home_registration", "account", "dataflow", "exam", "bls", "job_offer", "attestation", "activation"]
+        }
+      ]
+    },
+    {
+      "code": "KW", "name": "Kuwait", "region": "gulf", "currency": "KWD",
+      "summary": "The Ministry of Health licenses OTs. DataFlow verification comes first, before you can book the exam. Many private-sector hires go through agencies.",
+      "extra_job_sites": [{"name": "Indeed Kuwait", "url": "https://kw.indeed.com"}],
+      "routes": [
+        {
+          "id": "kw-moh", "regulator": "MOH Kuwait", "regulator_full": "Ministry of Health, Kuwait", "area": "Kuwait",
+          "portal": "MOH medical licensing portal", "exam_provider": "Prometric", "exam_name": "Kuwait MOH licensing exam",
+          "official_url": "https://medlic.moh.gov.kw", "check_domains": ["moh.gov.kw", "dataflowgroup.com", "prometric.com"],
+          "steps": ["eligibility", "home_registration", "account", "dataflow", "exam", "bls", "job_offer", "attestation", "activation"]
+        }
+      ]
+    },
+    {
+      "code": "BH", "name": "Bahrain", "region": "gulf", "currency": "BHD",
+      "summary": "The National Health Regulatory Authority (NHRA) licenses OTs. The licence application is usually made with the employing facility.",
+      "extra_job_sites": [{"name": "Indeed Bahrain", "url": "https://bh.indeed.com"}],
+      "routes": [
+        {
+          "id": "bh-nhra", "regulator": "NHRA", "regulator_full": "National Health Regulatory Authority", "area": "Bahrain",
+          "portal": "NHRA licensing system (usually with the employer)", "exam_provider": "Prometric", "exam_name": "NHRA licensing exam",
+          "official_url": "https://www.nhra.bh", "check_domains": ["nhra.bh", "dataflowgroup.com", "prometric.com"],
+          "steps": ["eligibility", "home_registration", "job_offer", "account", "dataflow", "exam", "bls", "attestation", "activation"]
+        }
+      ]
+    },
+    {
+      "code": "GB", "name": "United Kingdom", "region": "other", "currency": "GBP", "live_only": true,
+      "summary": "Regulated by the Health and Care Professions Council (HCPC). Built-in steps are not added yet: use 'Check current rules' to pull the route from the HCPC site.",
+      "language_test": "Usually required (IELTS or OET). Check the HCPC's current scores.",
+      "routes": [{"id": "gb-hcpc", "regulator": "HCPC", "regulator_full": "Health and Care Professions Council", "area": "United Kingdom",
+                  "official_url": "https://www.hcpc-uk.org", "check_domains": ["hcpc-uk.org"], "steps": []}]
+    },
+    {
+      "code": "IE", "name": "Ireland", "region": "other", "currency": "EUR", "live_only": true,
+      "summary": "Regulated by CORU's Occupational Therapists Registration Board. Use 'Check current rules' for the recognition route.",
+      "language_test": "Usually required for applicants educated outside Ireland. Check CORU's current rules.",
+      "routes": [{"id": "ie-coru", "regulator": "CORU", "regulator_full": "CORU, Occupational Therapists Registration Board", "area": "Ireland",
+                  "official_url": "https://www.coru.ie", "check_domains": ["coru.ie"], "steps": []}]
+    },
+    {
+      "code": "AU", "name": "Australia", "region": "other", "currency": "AUD", "live_only": true,
+      "summary": "Overseas-qualified OTs are assessed by the Occupational Therapy Council (OTC) and registered with the Occupational Therapy Board of Australia through Ahpra.",
+      "language_test": "Usually required (IELTS, OET or similar). Check the Board's English language standard.",
+      "routes": [{"id": "au-otba", "regulator": "OTC / OTBA", "regulator_full": "Occupational Therapy Council and Occupational Therapy Board of Australia", "area": "Australia",
+                  "official_url": "https://www.otcouncil.com.au", "check_domains": ["otcouncil.com.au", "occupationaltherapyboard.gov.au", "ahpra.gov.au"], "steps": []}]
+    },
+    {
+      "code": "NZ", "name": "New Zealand", "region": "other", "currency": "NZD", "live_only": true,
+      "summary": "Regulated by the Occupational Therapy Board of New Zealand.",
+      "language_test": "Usually required. Check the Board's current rules.",
+      "routes": [{"id": "nz-otbnz", "regulator": "OTBNZ", "regulator_full": "Occupational Therapy Board of New Zealand", "area": "New Zealand",
+                  "official_url": "https://www.otboard.org.nz", "check_domains": ["otboard.org.nz"], "steps": []}]
+    },
+    {
+      "code": "CA", "name": "Canada", "region": "other", "currency": "CAD", "live_only": true,
+      "summary": "Internationally educated OTs start with ACOTRO's substantial equivalency assessment, then register with the college in their province.",
+      "language_test": "Usually required. Check ACOTRO and the provincial college.",
+      "routes": [{"id": "ca-acotro", "regulator": "ACOTRO", "regulator_full": "Association of Canadian Occupational Therapy Regulatory Organizations", "area": "Canada",
+                  "official_url": "https://www.acotro-acore.org", "check_domains": ["acotro-acore.org"], "steps": []}]
+    },
+    {
+      "code": "US", "name": "United States", "region": "other", "currency": "USD", "live_only": true,
+      "summary": "The NBCOT certification exam plus a licence from the state you will work in.",
+      "language_test": "Usually required for internationally educated candidates. Check NBCOT's rules.",
+      "routes": [{"id": "us-nbcot", "regulator": "NBCOT", "regulator_full": "National Board for Certification in Occupational Therapy", "area": "United States",
+                  "official_url": "https://www.nbcot.org", "check_domains": ["nbcot.org"], "steps": []}]
+    },
+    {
+      "code": "SG", "name": "Singapore", "region": "other", "currency": "SGD", "live_only": true,
+      "summary": "Regulated by the Allied Health Professions Council (AHPC).",
+      "language_test": "May be required. Check the AHPC's current rules.",
+      "routes": [{"id": "sg-ahpc", "regulator": "AHPC", "regulator_full": "Allied Health Professions Council", "area": "Singapore",
+                  "official_url": "https://www.healthprofessionals.gov.sg/ahpc", "check_domains": ["healthprofessionals.gov.sg"], "steps": []}]
+    }
+  ],
+  "steps": {
+    "eligibility": {
+      "title": "Check eligibility",
+      "detail": "Compare your degree and post-qualification experience with the regulator's requirements for Occupational Therapist. Many ask for about 2 years of experience after qualifying, and the compulsory internship usually does not count. Recent experience matters: a long gap in practice can need extra steps.",
+      "docs": ["degree", "transcripts", "internship", "experience_letter"]
+    },
+    "home_registration": {
+      "title": "Home registration & good standing",
+      "detail": "Registration or membership with your home professional body (for India, AIOTA or your state council) and a certificate of good standing. Good standing certificates are usually expected to be recent, often issued within the last 3 to 6 months.",
+      "docs": ["registration", "good_standing"]
+    },
+    "account": {
+      "title": "Open your application",
+      "detail": "Create your account on the regulator's portal ({portal}) and start the application for Occupational Therapist.",
+      "docs": ["passport", "photo"]
+    },
+    "dataflow": {
+      "title": "DataFlow verification",
+      "detail": "DataFlow contacts your university, employers and registration body directly to confirm your documents. It often takes several weeks; start early and tell your employers' HR to expect the request.",
+      "docs": ["passport", "degree", "transcripts", "experience_letter", "registration", "good_standing"]
+    },
+    "exam": {
+      "title": "Licensing exam",
+      "detail": "Book and pass the {exam_name} with {exam_provider}. It is a computer-based multiple-choice exam; practise on the Interview page.",
+      "docs": ["exam_result"]
+    },
+    "eligibility_letter": {
+      "title": "Eligibility letter",
+      "detail": "Once the exam and verification are complete the regulator issues an eligibility letter. It is valid for a limited time; note the expiry date.",
+      "docs": ["eligibility_letter"]
+    },
+    "classification": {
+      "title": "Professional classification",
+      "detail": "SCFHS classifies you as a specialist in Occupational Therapy after the exam and verification.",
+      "docs": ["eligibility_letter"]
+    },
+    "bls": {
+      "title": "BLS certificate",
+      "detail": "A current Basic Life Support certificate (often American Heart Association). Many regulators and employers ask for it.",
+      "docs": ["bls"]
+    },
+    "job_offer": {
+      "title": "Job offer",
+      "detail": "An offer from a licensed facility. Check the contract: basic salary, allowances, housing, flights, insurance, notice period.",
+      "docs": ["offer_letter", "cv"]
+    },
+    "attestation": {
+      "title": "Degree attestation",
+      "detail": "Attestation of your degree for the destination country (state education department, India's Ministry of External Affairs, then the country's embassy). Usually needed for the employment visa.",
+      "docs": ["degree"]
+    },
+    "activation": {
+      "title": "Licence activation & visa",
+      "detail": "The employer activates or completes your licence and processes the employment visa.",
+      "docs": ["licence", "passport", "photo"]
+    }
+  }
+}

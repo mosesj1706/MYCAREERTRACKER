@@ -1,0 +1,20 @@
+# Installed to /etc/caddy/Caddyfile by deploy/setup.sh, with the domain filled in.
+# Caddy gets and renews the HTTPS certificate on its own.
+{DOMAIN} {
+	# Compress the 1 MB frontend bundle, never /api: interview replies stream token by token.
+	@assets path /assets/*
+	encode @assets zstd gzip
+
+	request_body {
+		max_size 25MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		-Server
+	}
+
+	reverse_proxy 127.0.0.1:8765
+}

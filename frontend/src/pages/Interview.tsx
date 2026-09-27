@@ -3,64 +3,116 @@ import { useLocation } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import { clsx } from "clsx";
-import { Bot, Send, Square, Save, Trash2, User, BrainCircuit, History, CheckCircle2, XCircle } from "lucide-react";
-import { api, streamSSE, type Application, type Gap, type InterviewRecord, type MCQ, type Profile } from "../lib/api";
+import { Bot, Send, Square, Save, Trash2, User, BrainCircuit, History, CheckCircle2, XCircle, Mic, MicOff, Volume2, VolumeX, Timer, BookOpen, Info } from "lucide-react";
+import { api, streamSSE, type Application, type CaseStudy, type CountriesPayload, type Gap, type InterviewRecord, type MCQ, type Profile } from "../lib/api";
+import { flag, label, usePack } from "../lib/pack";
 import { Badge, Button, Card, CardHeader, Empty, PageHeader, Segmented, Select, Skeleton, Progress } from "../components/ui";
 import { useToast } from "../components/Toast";
 
 type Msg = { role: "user" | "assistant"; content: string };
 type Tab = "mock" | "mcq" | "history";
+type NavState = { app_id?: number; mode?: string; case_id?: number };
+
+const TECH_MODES = [
+  { value: "mixed", label: "Mixed — includes your risk flags" }, { value: "technical", label: "Technical deep-dive" },
+  { value: "behavioral", label: "Behavioral (STAR)" }, { value: "project", label: "Project deep-dive — defend one of your repos" },
+];
 
 export default function Interview() {
+  const pack = usePack();
+  const loc = useLocation() as { state?: NavState };
   const [tab, setTab] = useState<Tab>("mock");
   return (
     <div>
-      <PageHeader title="Interview playground" subtitle="A recruiter who has read your profile, the job, and your gaps — and goes straight for them."
-        actions={<Segmented value={tab} onChange={setTab} options={[{ value: "mock", label: "Mock interview" }, { value: "mcq", label: "Quick-fire MCQs" }, { value: "history", label: "Past sessions" }]} />} />
-      {tab === "mock" && <Mock />}{tab === "mcq" && <Mcq />}{tab === "history" && <HistoryTab />}
+      <PageHeader title={pack.key === "ot" ? "Interview practice" : "Interview playground"} subtitle={label(pack, "interviewer", "A recruiter who has read your profile, the job, and your gaps — and goes straight for them.")}
+        actions={<Segmented value={tab} onChange={setTab} options={[{ value: "mock", label: "Mock interview" }, { value: "mcq", label: label(pack, "mcq_tab", "Quick-fire MCQs") }, { value: "history", label: "Past sessions" }]} />} />
+      {tab === "mock" && <Mock init={loc.state} />}{tab === "mcq" && <Mcq />}{tab === "history" && <HistoryTab />}
     </div>
   );
 }
 
-function Mock() {
-  const toast = useToast(); const qc = useQueryClient();
-  const loc = useLocation() as { state?: { app_id?: number } };
+// ---------------------------------------------------------------- voice (Safari/Chrome Web Speech)
+type Recognition = { start: () => void; stop: () => void; continuous: boolean; interimResults: boolean; lang: string; onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null; onend: (() => void) | null };
+const SpeechRec = (window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition }).SpeechRecognition
+  ?? (window as unknown as { webkitSpeechRecognition?: new () => Recognition }).webkitSpeechRecognition;
+/** Read the interviewer's next question aloud: the text after the last "---" (skips grade and critique). */
+function speak(markdown: string) {
+  if (!("speechSynthesis" in window)) return;
+  const tail = markdown.split(/\n-{3,}\n/).pop() ?? markdown;
+  const text = tail.replace(/[*_#>`]/g, "").replace(/\s+/g, " ").trim();
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.lang = "en-GB"; u.rate = 1;
+  window.speechSynthesis.speak(u);
+}
+
+function Mock({ init }: { init?: NavState }) {
+  const toast = useToast(); const qc = useQueryClient(); const pack = usePack();
+  const ot = pack.key === "ot";
+  const modes = pack.interview_modes.length ? pack.interview_modes : TECH_MODES;
   const apps = useQuery({ queryKey: ["applications"], queryFn: () => api.get<{ items: Application[] }>("/api/applications") });
-  const [appId, setAppId] = useState<number>(loc.state?.app_id ?? 0);
-  const [mode, setMode] = useState<"mixed" | "technical" | "behavioral" | "project">("mixed");
   const profile = useQuery({ queryKey: ["profile"], queryFn: () => api.get<Profile | null>("/api/profile") });
+  const ctry = useQuery({ queryKey: ["countries"], queryFn: () => api.get<CountriesPayload>("/api/countries"), enabled: ot });
+  const cases = useQuery({ queryKey: ["cases"], queryFn: () => api.get<{ cases: CaseStudy[] }>("/api/cases"), enabled: ot });
+  const [appId, setAppId] = useState<number>(init?.app_id ?? 0);
+  const [mode, setMode] = useState<string>(init?.mode ?? "mixed");
   const [project, setProject] = useState<string>("");
+  const [caseId, setCaseId] = useState<number>(init?.case_id ?? 0);
+  const [country, setCountry] = useState<string>("");
+  const [voice, setVoice] = useState(() => { try { return localStorage.getItem("voice") === "on"; } catch { return false; } });
+  useEffect(() => { try { localStorage.setItem("voice", voice ? "on" : "off"); } catch {} if (!voice && "speechSynthesis" in window) window.speechSynthesis.cancel(); }, [voice]);
+  const app = apps.data?.items.find((a) => a.id === appId);
+  useEffect(() => { if (ot) setCountry(app?.country ?? ctry.data?.selection.primary ?? ""); }, [ot, app?.country, ctry.data?.selection.primary]);
   const [sid, setSid] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [input, setInput] = useState("");
   const [ended, setEnded] = useState(false);
+  const [listening, setListening] = useState(false);
+  const rec = useRef<Recognition | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [msgs, streaming]);
 
   const send = async (text: string | null, id: string | null = sid) => {
     if (!id) return;
+    rec.current?.stop();
     if (text) setMsgs((m) => [...m, { role: "user", content: text }]);
     setMsgs((m) => [...m, { role: "assistant", content: "" }]);
     setStreaming(true);
+    let reply = "";
     try {
-      await streamSSE(`/api/interview/${id}/message`, { text }, (chunk) => setMsgs((m) => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], content: c[c.length - 1].content + chunk }; return c; }));
+      await streamSSE(`/api/interview/${id}/message`, { text }, (chunk) => { reply += chunk; setMsgs((m) => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], content: c[c.length - 1].content + chunk }; return c; }); });
     } catch (e) { toast("error", (e as Error).message); }
     setStreaming(false);
+    if (voice && reply) speak(reply);
     if (text?.trim().toLowerCase() === "end") setEnded(true);
   };
   const start = async () => {
     if (mode === "project" && !project) { toast("error", "Pick a project to deep-dive."); return; }
-    const r = await api.post<{ session_id: string }>("/api/interview", { app_id: appId || null, mode, project: mode === "project" ? project : null });
-    setSid(r.session_id); setMsgs([]); setEnded(false);
-    await send(null, r.session_id);
+    if (mode === "case" && !caseId) { toast("error", "Pick a case study to defend."); return; }
+    try {
+      const r = await api.post<{ session_id: string }>("/api/interview", { app_id: appId || null, mode, project: mode === "project" ? project : null, country: country || null, case_id: mode === "case" ? caseId : null });
+      setSid(r.session_id); setMsgs([]); setEnded(false);
+      await send(null, r.session_id);
+    } catch (e) { toast("error", (e as Error).message); }
+  };
+  const dictate = () => {
+    if (!SpeechRec) return;
+    if (listening) { rec.current?.stop(); return; }
+    const r = new SpeechRec(); r.continuous = true; r.interimResults = false; r.lang = "en-IN";
+    const base = input ? input.trimEnd() + " " : "";
+    let said = "";
+    r.onresult = (e) => { for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) said += e.results[i][0].transcript + " "; setInput(base + said.trim()); };
+    r.onend = () => setListening(false);
+    rec.current = r; r.start(); setListening(true);
   };
   const save = useMutation({ mutationFn: () => api.post(`/api/interview/${sid}/save`), onSuccess: () => { setSid(null); setMsgs([]); qc.invalidateQueries({ queryKey: ["interviews"] }); qc.invalidateQueries({ queryKey: ["analytics"] }); toast("success", "Session saved."); } });
-  const discard = async () => { if (sid) await api.del(`/api/interview/${sid}`); setSid(null); setMsgs([]); };
+  const discard = async () => { if (sid) await api.del(`/api/interview/${sid}`); if ("speechSynthesis" in window) window.speechSynthesis.cancel(); setSid(null); setMsgs([]); };
+  const selectedCountries = ctry.data?.countries.filter((c) => ctry.data!.selection.selected.includes(c.code)) ?? [];
+  const modeLabel = modes.find((m) => m.value === mode)?.label.split(" — ")[0] ?? mode;
 
   if (!sid) {
     return (
-      <Card className="p-6 max-w-2xl">
+      <Card className="p-6 max-w-3xl">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="text-[13px]"><div className="text-muted mb-1.5">Interview for</div>
             <Select value={appId} onChange={(e) => setAppId(Number(e.target.value))} className="w-full">
@@ -68,7 +120,22 @@ function Mock() {
               {apps.data?.items.map((a) => <option key={a.id} value={a.id}>#{a.id} · {a.title}{a.company ? " @ " + a.company : ""}</option>)}
             </Select></label>
           <label className="text-[13px]"><div className="text-muted mb-1.5">Mode</div>
-            <Select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)} className="w-full"><option value="mixed">Mixed — includes your risk flags</option><option value="technical">Technical deep-dive</option><option value="behavioral">Behavioral (STAR)</option><option value="project">Project deep-dive — defend one of your repos</option></Select></label>
+            <Select value={mode} onChange={(e) => setMode(e.target.value)} className="w-full">{modes.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</Select></label>
+          {ot && (
+            <label className="text-[13px]"><div className="text-muted mb-1.5">Country style</div>
+              <Select value={country} onChange={(e) => setCountry(e.target.value)} className="w-full">
+                <option value="">Any country</option>
+                {(selectedCountries.length ? selectedCountries : ctry.data?.countries ?? []).map((c) => <option key={c.code} value={c.code}>{flag(c.code)} {c.name}</option>)}
+              </Select></label>
+          )}
+          {mode === "case" && (
+            <label className="text-[13px]"><div className="text-muted mb-1.5">Case study</div>
+              <Select value={caseId} onChange={(e) => setCaseId(Number(e.target.value))} className="w-full">
+                <option value={0}>Choose a case…</option>
+                {cases.data?.cases.map((c) => <option key={c.id} value={c.id}>{c.title}{c.story ? "" : " (no story yet)"}</option>)}
+              </Select>
+              {cases.data && cases.data.cases.length === 0 && <div className="text-[12px] text-warn mt-1">No case studies yet: add one under CPD & cases.</div>}</label>
+          )}
           {mode === "project" && (
             <label className="text-[13px] md:col-span-2"><div className="text-muted mb-1.5">Project</div>
               <Select value={project} onChange={(e) => setProject(e.target.value)} className="w-full">
@@ -78,9 +145,15 @@ function Mock() {
               <div className="text-[12px] text-muted mt-1">Projects linked to a synced GitHub repo load the README and file tree, so questions are about your actual code.</div></label>
           )}
         </div>
+        {ot && (
+          <label className="mt-4 flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer">
+            <input type="checkbox" className="size-4 accent-[var(--accent)]" checked={voice} onChange={() => setVoice(!voice)} />
+            <Volume2 className="size-4 text-accent" /><span className="text-[13px]"><b>Voice practice.</b> The panel's questions are read aloud; answer with the microphone button (or the iPad keyboard's dictation).</span>
+          </label>
+        )}
         <ul className="text-[13px] text-muted mt-4 space-y-1 list-disc pl-5">
           <li>One question at a time. Every answer gets a <b className="text-text">grade, a critique, and the pro answer</b> built from your real background.</li>
-          <li>Type <code className="px-1 rounded bg-surface-2">tutor</code> if you're lost — it explains the concept, then asks again.</li>
+          <li>Type <code className="px-1 rounded bg-surface-2">tutor</code> if you're lost — it explains, then asks again.</li>
           <li>Type <code className="px-1 rounded bg-surface-2">end</code> for a final report with the one question to rehearse most.</li>
         </ul>
         <Button variant="primary" size="lg" className="mt-5" onClick={start}><Bot className="size-4" /> Start interview</Button>
@@ -89,29 +162,32 @@ function Mock() {
   }
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4 items-start">
-      <Card className="flex flex-col h-[calc(100vh-190px)] min-h-[520px]">
+      <Card className="flex flex-col h-[calc(100dvh-190px)] min-h-[480px]">
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {msgs.map((m, i) => (
             <div key={i} className={clsx("flex gap-3", m.role === "user" && "flex-row-reverse")}>
               <div className={clsx("size-8 rounded-full grid place-items-center shrink-0", m.role === "assistant" ? "bg-accent-soft text-accent" : "bg-surface-2 text-muted")}>{m.role === "assistant" ? <Bot className="size-4" /> : <User className="size-4" />}</div>
-              <div className={clsx("max-w-[80%] rounded-2xl px-4 py-3 text-[14px] leading-relaxed", m.role === "assistant" ? "bg-surface-2 rounded-tl-md" : "bg-accent text-white rounded-tr-md")}>
+              <div className={clsx("max-w-[82%] rounded-2xl px-4 py-3 text-[14px] leading-relaxed", m.role === "assistant" ? "bg-surface-2 rounded-tl-md" : "bg-accent text-white rounded-tr-md")}>
                 {m.role === "assistant" ? <div className="prose-chat">{m.content ? <ReactMarkdown>{m.content}</ReactMarkdown> : <span className="inline-flex gap-1 py-1"><Dot /><Dot d={1} /><Dot d={2} /></span>}</div> : m.content}
+                {m.role === "assistant" && m.content && !streaming && <button onClick={() => speak(m.content)} className="mt-1.5 text-[11.5px] text-faint hover:text-text inline-flex items-center gap-1"><Volume2 className="size-3" /> Read aloud</button>}
               </div>
             </div>
           ))}
           <div ref={bottom} />
         </div>
         <form onSubmit={(e) => { e.preventDefault(); if (input.trim() && !streaming) { send(input.trim()); setInput(""); } }} className="border-t border-border p-3 flex gap-2">
-          <textarea value={input} onChange={(e) => setInput(e.target.value)} rows={2} placeholder={ended ? "Session ended — save it." : "Answer as you would out loud… (Enter to send, Shift+Enter for newline)"} disabled={streaming || ended}
+          <textarea value={input} onChange={(e) => setInput(e.target.value)} rows={2} placeholder={ended ? "Session ended — save it." : listening ? "Listening… speak your answer" : "Answer as you would out loud… (Enter to send, Shift+Enter for newline)"} disabled={streaming || ended}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.currentTarget.form as HTMLFormElement).requestSubmit(); } }}
             className="flex-1 resize-none rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:border-accent outline-none" />
+          {SpeechRec && <Button type="button" variant={listening ? "danger" : "secondary"} onClick={dictate} disabled={streaming || ended} className="h-auto" title={listening ? "Stop dictation" : "Answer by voice"}>{listening ? <MicOff className="size-4" /> : <Mic className="size-4" />}</Button>}
           <Button type="submit" variant="primary" disabled={!input.trim() || streaming || ended} className="h-auto"><Send className="size-4" /></Button>
         </form>
       </Card>
       <div className="space-y-3">
         <Card className="p-4 text-[13px] space-y-2">
           <div className="text-muted">Session</div>
-          <div><Badge tone="accent">{mode}</Badge> <span className="text-muted">{msgs.filter((m) => m.role === "user").length} answers</span></div>
+          <div className="flex flex-wrap gap-1.5 items-center"><Badge tone="accent">{modeLabel}</Badge>{country && <Badge>{flag(country)} {country}</Badge>}<span className="text-muted">{msgs.filter((m) => m.role === "user").length} answers</span></div>
+          {ot && <button onClick={() => setVoice(!voice)} className="inline-flex items-center gap-1.5 text-[12.5px] text-muted hover:text-text">{voice ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />} Voice {voice ? "on" : "off"}</button>}
           <div className="pt-2 space-y-2">
             <Button className="w-full" onClick={() => !streaming && send("end")} disabled={streaming || ended}><Square className="size-4" /> End & get report</Button>
             <Button variant="primary" className="w-full" loading={save.isPending} onClick={() => save.mutate()} disabled={streaming}><Save className="size-4" /> Save session</Button>
@@ -124,56 +200,102 @@ function Mock() {
 }
 const Dot = ({ d = 0 }: { d?: number }) => <span className="size-1.5 rounded-full bg-muted animate-bounce" style={{ animationDelay: `${d * 120}ms` }} />;
 
+// ---------------------------------------------------------------- MCQs / licensing exam practice
 function Mcq() {
-  const toast = useToast(); const qc = useQueryClient();
+  const toast = useToast(); const qc = useQueryClient(); const pack = usePack();
+  const ot = pack.key === "ot";
   const gaps = useQuery({ queryKey: ["gaps", 1], queryFn: () => api.get<Gap[]>("/api/gaps?min_jobs=1") });
   const stats = useQuery({ queryKey: ["mcq-stats"], queryFn: () => api.get<{ topic: string; answered: number; accuracy: number }[]>("/api/mcq/stats") });
-  const gapTopics = (gaps.data ?? []).filter((g) => g.pressure > 0).slice(0, 8).map((g) => g.skill);
-  const pool = [...new Set([...gapTopics, "AWS", "SQL", "Python", "Apache Airflow"])];
+  const ctry = useQuery({ queryKey: ["countries"], queryFn: () => api.get<CountriesPayload>("/api/countries"), enabled: ot });
+  // OT: licences, BLS and soft skills are requirements, not exam topics.
+  const gapTopics = (gaps.data ?? []).filter((g) => g.pressure > 0 && !(ot && ["credentials", "soft"].includes(g.category ?? ""))).slice(0, 8).map((g) => g.skill);
+  const base = ot ? pack.mcq_topics : [...gapTopics, ...pack.mcq_topics];
+  const pool = [...new Set(ot ? [...base, ...gapTopics.filter((g) => !base.includes(g)).slice(0, 4)] : base)];
   const [topics, setTopics] = useState<string[] | null>(null);
-  const sel = topics ?? gapTopics.slice(0, 3);
+  const sel = topics ?? (ot ? pack.mcq_topics.slice(0, 3) : gapTopics.slice(0, 3));
+  const exams = (ctry.data?.summaries ?? []).map((s) => { const r = ctry.data!.countries.find((c) => c.code === s.country)?.routes.find((x) => x.id === s.route_id); return r?.exam_name ? { id: r.id, label: `${flag(s.country)} ${r.regulator} exam · ${r.exam_provider}` } : null; }).filter(Boolean) as { id: string; label: string }[];
+  const [exam, setExam] = useState<string>("");
+  useEffect(() => { if (ot && !exam && exams.length) setExam(exams[0].id); }, [ot, exam, exams]);
+  const [format, setFormat] = useState<"quick" | "timed">("quick");
   const [n, setN] = useState(5);
   const [qs, setQs] = useState<MCQ[] | null>(null);
   const [picks, setPicks] = useState<Record<number, number>>({});
   const [checked, setChecked] = useState(false);
-  const gen = useMutation({ mutationFn: () => api.post<MCQ[]>("/api/mcq/generate", { topics: sel, n }), onSuccess: (r) => { setQs(r); setPicks({}); setChecked(false); }, onError: (e) => toast("error", (e as Error).message) });
+  const [deadline, setDeadline] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { if (!deadline || checked) return; const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, [deadline, checked]);
+  const left = deadline ? Math.max(0, Math.round((deadline - now) / 1000)) : null;
+  const gen = useMutation({
+    mutationFn: () => api.post<MCQ[]>("/api/mcq/generate", { topics: sel, n, exam: ot ? exam || null : null }),
+    onSuccess: (r) => { setQs(r); setPicks({}); setChecked(false); setDeadline(format === "timed" ? Date.now() + r.length * 72_000 : null); setNow(Date.now()); },
+    onError: (e) => toast("error", (e as Error).message),
+  });
   const check = async () => {
+    if (!qs || checked) return;
     setChecked(true);
-    await Promise.all(qs!.map((q, i) => api.post("/api/mcq/record", { question: q, correct: picks[i] === q.answer_index })));
+    await Promise.all(qs.map((q, i) => api.post("/api/mcq/record", { question: q, correct: picks[i] === q.answer_index })));
     qc.invalidateQueries({ queryKey: ["mcq-stats"] }); qc.invalidateQueries({ queryKey: ["analytics"] });
   };
+  useEffect(() => { if (left === 0 && qs && !checked) { toast("info", "Time's up — marking your answers."); check(); } }, [left]); // eslint-disable-line react-hooks/exhaustive-deps
   const score = qs ? qs.filter((q, i) => picks[i] === q.answer_index).length : 0;
+  const byTopic = qs && checked ? Object.entries(qs.reduce<Record<string, [number, number]>>((acc, q, i) => { const a = acc[q.topic] ?? [0, 0]; acc[q.topic] = [a[0] + (picks[i] === q.answer_index ? 1 : 0), a[1] + 1]; return acc; }, {})) : [];
+  const instant = ot && format === "quick";  // OT quick-fire: feedback per question; tech: check at the end as before
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-4 items-start">
       <div className="space-y-4">
         <Card className="p-5">
-          <div className="text-[13px] text-muted mb-2">Topics — defaults to your biggest gaps</div>
+          {ot && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+              <label className="text-[13px]"><div className="text-muted mb-1.5">Practising for</div>
+                <Select value={exam} onChange={(e) => setExam(e.target.value)} className="w-full">
+                  {exams.length === 0 && <option value="">Pick a country first (Countries & licence)</option>}
+                  {exams.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+                </Select></label>
+              <div className="text-[13px]"><div className="text-muted mb-1.5">Format</div>
+                <Segmented value={format} onChange={(v) => { setFormat(v); setN(v === "timed" ? 20 : 5); }} options={[{ value: "quick", label: "Quick-fire" }, { value: "timed", label: "Timed mock exam" }]} /></div>
+            </div>
+          )}
+          <div className="text-[13px] text-muted mb-2">Topics{ot ? "" : " — defaults to your biggest gaps"}</div>
           <div className="flex flex-wrap gap-1.5">{pool.map((t) => <button key={t} onClick={() => setTopics(sel.includes(t) ? sel.filter((x) => x !== t) : [...sel, t])} className={clsx("rounded-md border px-2.5 py-1 text-[12.5px] font-medium transition", sel.includes(t) ? "bg-accent text-white border-accent" : "border-border text-muted hover:border-border-strong")}>{t}</button>)}</div>
-          <div className="flex items-center gap-3 mt-4">
-            <Select value={n} onChange={(e) => setN(Number(e.target.value))}>{[3, 5, 8, 10].map((x) => <option key={x} value={x}>{x} questions</option>)}</Select>
-            <Button variant="primary" loading={gen.isPending} disabled={sel.length === 0} onClick={() => gen.mutate()}><BrainCircuit className="size-4" /> {gen.isPending ? "Writing scenario questions…" : "Generate"}</Button>
+          <div className="flex items-center gap-3 mt-4 flex-wrap">
+            <Select value={n} onChange={(e) => setN(Number(e.target.value))}>{(format === "timed" ? [10, 20, 30] : [3, 5, 8, 10]).map((x) => <option key={x} value={x}>{x} questions{format === "timed" ? ` · ${Math.round(x * 1.2)} min` : ""}</option>)}</Select>
+            <Button variant="primary" loading={gen.isPending} disabled={sel.length === 0 || (ot && !exam && exams.length > 0)} onClick={() => gen.mutate()}><BrainCircuit className="size-4" /> {gen.isPending ? (n > 10 ? "Writing the exam (1–2 min)…" : "Writing questions…") : format === "timed" ? "Start mock exam" : "Generate"}</Button>
           </div>
+          {ot && <p className="text-[12px] text-muted mt-3 flex gap-1.5"><Info className="size-3.5 shrink-0 mt-0.5" />AI-written practice in the style of the licensing exam, not real exam questions. Each answer names where to read more; check anything surprising in your textbook.</p>}
         </Card>
         {qs && (
           <div className="space-y-3">
-            {qs.map((q, i) => { const ok = picks[i] === q.answer_index; return (
-              <Card key={i} className={clsx("p-5", checked && (ok ? "border-success/40" : "border-danger/40"))}>
+            {deadline && !checked && (
+              <Card className="px-5 py-3 flex items-center justify-between sticky top-2 z-10">
+                <span className="inline-flex items-center gap-2 font-semibold"><Timer className="size-4 text-accent" /> <span className={clsx("num", left! < 60 && "text-danger")}>{Math.floor(left! / 60)}:{String(left! % 60).padStart(2, "0")}</span></span>
+                <span className="text-[13px] text-muted">{Object.keys(picks).length}/{qs.length} answered</span>
+                <Button size="sm" variant="primary" onClick={check}>Submit</Button>
+              </Card>
+            )}
+            {qs.map((q, i) => { const ok = picks[i] === q.answer_index; const reveal = checked || (instant && picks[i] !== undefined); return (
+              <Card key={i} className={clsx("p-5", reveal && (ok ? "border-success/40" : "border-danger/40"))}>
                 <div className="flex items-center gap-2 text-[12px] text-muted mb-2"><Badge>{q.topic}</Badge><Badge tone={q.difficulty === "deep" ? "accent" : "neutral"}>{q.difficulty}</Badge></div>
                 <div className="font-medium text-[14.5px] leading-relaxed">{i + 1}. {q.question}</div>
                 <div className="mt-3 space-y-1.5">
                   {q.options.map((o, j) => (
-                    <button key={j} disabled={checked} onClick={() => setPicks((p) => ({ ...p, [i]: j }))}
-                      className={clsx("w-full text-left rounded-lg border px-3 py-2 text-[13.5px] transition", picks[i] === j ? "border-accent bg-accent-soft/60" : "border-border hover:border-border-strong",
-                        checked && j === q.answer_index && "border-success bg-success-soft/60", checked && picks[i] === j && j !== q.answer_index && "border-danger bg-danger-soft/60")}>
+                    <button key={j} disabled={reveal} onClick={() => setPicks((p) => ({ ...p, [i]: j }))}
+                      className={clsx("w-full text-left rounded-lg border px-3 py-2.5 text-[13.5px] transition", picks[i] === j ? "border-accent bg-accent-soft/60" : "border-border hover:border-border-strong",
+                        reveal && j === q.answer_index && "border-success bg-success-soft/60", reveal && picks[i] === j && j !== q.answer_index && "border-danger bg-danger-soft/60")}>
                       <span className="num text-faint mr-2">{"ABCD"[j]}</span>{o}
                     </button>
                   ))}
                 </div>
-                {checked && <div className="mt-3 text-[13px] text-muted flex gap-2">{ok ? <CheckCircle2 className="size-4 text-success shrink-0 mt-0.5" /> : <XCircle className="size-4 text-danger shrink-0 mt-0.5" />}<span>{q.explanation}</span></div>}
+                {reveal && <div className="mt-3 text-[13px] text-muted flex gap-2">{ok ? <CheckCircle2 className="size-4 text-success shrink-0 mt-0.5" /> : <XCircle className="size-4 text-danger shrink-0 mt-0.5" />}<span>{q.explanation}{q.reference && <span className="block mt-1 text-[12px] inline-flex items-center gap-1"><BookOpen className="size-3" /> Read more: {q.reference}</span>}</span></div>}
               </Card>
             ); })}
-            {!checked ? <Button variant="primary" size="lg" disabled={Object.keys(picks).length < qs.length} onClick={check}>Check answers</Button>
-              : <Card className="p-5 flex items-center justify-between"><div className="text-lg font-semibold">Score <span className="num">{score}/{qs.length}</span></div><Button onClick={() => gen.mutate()} loading={gen.isPending}>Another set</Button></Card>}
+            {!checked ? (deadline ? null : <Button variant="primary" size="lg" disabled={Object.keys(picks).length < qs.length} onClick={check}>{instant ? "Finish & record" : "Check answers"}</Button>)
+              : (
+                <Card className="p-5">
+                  <div className="flex items-center justify-between gap-3 flex-wrap"><div className="text-lg font-semibold">Score <span className="num">{score}/{qs.length}</span> <span className="text-muted text-[15px] font-normal">· {Math.round((100 * score) / qs.length)}%</span></div><Button onClick={() => gen.mutate()} loading={gen.isPending}>Another set</Button></div>
+                  {byTopic.length > 1 && <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">{byTopic.map(([t, [r, all]]) => <div key={t} className="text-[13px]"><div className="flex justify-between"><span className="truncate">{t}</span><span className="num text-muted">{r}/{all}</span></div><Progress value={(100 * r) / all} tone={r / all >= 0.75 ? "success" : r / all >= 0.5 ? "warn" : "danger"} className="mt-1" /></div>)}</div>}
+                </Card>
+              )}
           </div>
         )}
       </div>

@@ -1,0 +1,17 @@
+You write practice multiple-choice questions for an occupational therapist preparing for {exam}.
+Generate {n} questions covering these topics: {topics}. Spread them across the topics.
+
+Rules:
+- Match the style of computer-based OT licensing exams: mostly short clinical vignettes ("A 45-year-old with a C6
+  complete spinal cord injury...") asking for the best next action, the most appropriate assessment, the priority,
+  the precaution, or the expected outcome. Some direct knowledge questions (anatomy, frames of reference) are fine.
+- Test entry-level clinical reasoning an OT with about 2-3 years of experience must have. No trivia.
+- Exactly 4 options, one clearly best. Distractors are plausible to someone with shallow knowledge.
+- explanation: why the answer is right AND why the most tempting distractor is wrong. 2-4 sentences.
+- reference: the standard textbook or guideline where this is covered, by title only (e.g. "Pedretti's Occupational
+  Therapy: Practice Skills for Physical Dysfunction", "Case-Smith's Occupational Therapy for Children and Adolescents",
+  "Occupational Therapy Practice Framework (AOTA)"). If unsure, null. Never invent editions, chapters or pages.
+- Only well-established content. If a fact varies between countries or guidelines, do not ask it.
+- These are practice questions, not real exam questions; never claim to reproduce an actual exam.
+- difficulty: "core" for must-know, "deep" for what separates strong candidates.
+- topic must be one of the given topics, verbatim.

@@ -8,8 +8,9 @@ import { Badge, Button, Card, CardHeader, Gauge, Input, PageHeader, Textarea } f
 import { CopyBlock } from "../components/Copy";
 import { useToast } from "../components/Toast";
 import { download, scoreTone, usePersistedState } from "../lib/util";
+import { flag, usePack } from "../lib/pack";
 
-type Analysis = { jd: string; job: JobAnalysis; match: MatchResult; app_id?: number; tailored?: TailoredOutput };
+type Analysis = { jd: string; job: JobAnalysis; match: MatchResult; app_id?: number; tailored?: TailoredOutput; country?: string | null };
 
 const STRENGTH: Record<RequirementMatch["strength"], { label: string; tone: "success" | "warn" | "danger"; hint: string }> = {
   strong: { label: "Strong", tone: "success", hint: "Hands-on evidence in your profile" },
@@ -23,23 +24,24 @@ export default function Tailor() {
   const [url, setUrl] = useState("");
   const toast = useToast();
   const qc = useQueryClient();
+  const pack = usePack();
 
   // Persist straight to sessionStorage in onSuccess: useMutation callbacks still fire if the user
   // navigated away mid-request, but component state would be gone.
   const analyze = useMutation({
     mutationKey: ["analyze"],
-    mutationFn: (text: string) => api.post<{ job: JobAnalysis; match: MatchResult }>("/api/jd/analyze", { jd_text: text }).then((r) => ({ jd: text, job: r.job, match: r.match })),
+    mutationFn: (text: string) => api.post<{ job: JobAnalysis; match: MatchResult; country?: string | null }>("/api/jd/analyze", { jd_text: text }).then((r) => ({ jd: text, job: r.job, match: r.match, country: r.country })),
     onSuccess: (r) => { try { sessionStorage.setItem("tailor.analysis", JSON.stringify(r)); } catch {} setA(r); },
     onError: (e) => toast("error", (e as Error).message),
   });
   const inFlight = useIsMutating({ mutationKey: ["analyze"] }) > 0;
   const track = useMutation({
-    mutationFn: () => api.post<Application>("/api/applications", { jd_text: a!.jd, job: a!.job, match: a!.match, url: url || null, company: a!.job.company, tailored: a!.tailored ?? null }),
+    mutationFn: () => api.post<Application>("/api/applications", { jd_text: a!.jd, job: a!.job, match: a!.match, url: url || null, company: a!.job.company, tailored: a!.tailored ?? null, country: a!.country ?? null }),
     onSuccess: (r) => { setA({ ...a!, app_id: r.id }); qc.invalidateQueries({ queryKey: ["applications"] }); qc.invalidateQueries({ queryKey: ["gaps"] }); qc.invalidateQueries({ queryKey: ["analytics"] }); toast("success", `Tracking #${r.id} — it's in your pipeline.`); },
     onError: (e) => toast("error", (e as Error).message),
   });
   const tailor = useMutation({
-    mutationFn: () => api.post<TailoredOutput>("/api/jd/tailor", { jd_text: a!.jd, job: a!.job, match: a!.match, app_id: a!.app_id ?? null }),
+    mutationFn: () => api.post<TailoredOutput>("/api/jd/tailor", { jd_text: a!.jd, job: a!.job, match: a!.match, app_id: a!.app_id ?? null, country: a!.country ?? null }),
     onSuccess: (t) => { setA({ ...a!, tailored: t }); toast("success", "Tailored content ready."); },
     onError: (e) => toast("error", (e as Error).message),
   });
@@ -80,7 +82,9 @@ export default function Tailor() {
                     <div>
                       <h2 className="text-lg font-bold tracking-tight">{a.job.title}{a.job.company && <span className="text-muted font-medium"> · {a.job.company}</span>}</h2>
                       <div className="flex flex-wrap gap-1.5 mt-1.5">
-                        <Badge>{a.job.seniority}</Badge>{a.job.years_required != null && <Badge>{a.job.years_required}+ yrs</Badge>}{a.job.location && <Badge>{a.job.location}</Badge>}
+                        <Badge>{a.job.seniority}</Badge>{a.job.years_required != null && <Badge>{a.job.years_required}+ yrs</Badge>}{a.job.location && <Badge>{a.country ? `${flag(a.country)} ` : ""}{a.job.location}</Badge>}
+                        {pack.key === "ot" && a.job.licence_required && <Badge tone="warn">Licence: {a.job.licence_required}</Badge>}
+                        {pack.key === "ot" && a.job.facility_type && <Badge>{a.job.facility_type}</Badge>}
                         <Badge tone="success">{a.match.matches.filter((m) => m.strength === "strong").length} strong</Badge>
                         <Badge tone="warn">{a.match.matches.filter((m) => m.strength === "partial").length} partial</Badge>
                         <Badge tone="danger">{a.match.matches.filter((m) => m.strength === "none").length} missing</Badge>
@@ -94,6 +98,7 @@ export default function Tailor() {
                     </div>
                   </div>
                   <p className="text-[13.5px] text-muted mt-2">{a.job.summary}</p>
+                  {pack.key === "ot" && (a.job.package?.length ?? 0) > 0 && <div className="mt-2 text-[12.5px] flex flex-wrap gap-1.5 items-center"><span className="text-muted">Package:</span>{a.job.package!.map((x) => <Badge key={x} tone="success">{x}</Badge>)}</div>}
                   <div className={clsx("mt-3 rounded-lg border px-4 py-3 text-[13.5px] leading-relaxed",
                     scoreTone(a.match.score) === "success" ? "border-success/30 bg-success-soft/40" : scoreTone(a.match.score) === "warn" ? "border-warn/30 bg-warn-soft/40" : "border-danger/30 bg-danger-soft/40")}>
                     <span className="font-semibold">Verdict.</span> {a.match.verdict}

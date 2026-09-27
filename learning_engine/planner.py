@@ -7,18 +7,18 @@ import anthropic
 from app.core import llm
 from app.core.config import DATA_DIR, load_prompt
 from app.core.models import LearningPlan, Profile, Resource, ResourceList, Skill, SkillCategory, Credential, CredentialList
+from app.core.pack import PACK
 from app.core.tracker import SkillDemand
 
 PLAN_PATH = DATA_DIR / "learning_plan.json"
 
 
-# Issuers whose free credentials a recruiter for a cloud/data role will recognise. The search is
-# steered at these; the ranker still classifies whatever comes back and greys out the rest.
-CREDENTIAL_ISSUERS = [
-    "skillbuilder.aws", "aws.amazon.com/training", "aws.amazon.com/education/awseducate", "databricks.com/learn",
-    "learn.getdbt.com", "academy.astronomer.io", "learn.snowflake.com", "developer.confluent.io", "kaggle.com/learn",
-    "freecodecamp.org/learn", "learn.microsoft.com", "cloudskillsboost.google", "learn.mongodb.com", "hackerrank.com/skills-verification",
-]
+# Issuers whose free credentials a recruiter for the target role will recognise (per profession pack).
+# The search is steered at these; the ranker still classifies whatever comes back and greys out the rest.
+CREDENTIAL_ISSUERS = PACK.credential_issuers
+_ISSUER_KIND = "the vendors' own free training" if PACK.key == "tech" else "professional bodies' and health authorities' free training"
+_RESOURCE_KIND = "official docs, tutorials, labs, courses" if PACK.key == "tech" else \
+    "clinical guidelines, evidence summaries, reputable courses and practical how-to resources"
 
 
 def find_credentials(skills: list[str], profile: Profile) -> list[Credential]:
@@ -34,7 +34,7 @@ def find_credentials(skills: list[str], profile: Profile) -> list[Credential]:
         messages=[{"role": "user", "content":
                    f"Find FREE courses, learning paths or assessments that end in a certificate, badge or accreditation "
                    f"for these skills: {wanted}. Target role: {profile.target.primary_role}. Search up to four times: "
-                   f"first the vendors' own free training (sites like {issuers}), then 'free certificate' or 'free badge' "
+                   f"first {_ISSUER_KIND} (sites like {issuers}), then 'free certificate' or 'free badge' "
                    f"plus the skill names. For each result note whether the credential itself is free or only the content. "
                    f"List everything found with titles and URLs."}],
         output_config={"effort": "low"},
@@ -103,7 +103,7 @@ def find_resources(skill: str, profile: Profile) -> list[Resource]:
         tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": 2}],
         messages=[{"role": "user", "content":
                    f"Find the best free or well-regarded resources to learn {skill} hands-on for a "
-                   f"{profile.target.primary_role}: official docs, tutorials, labs, courses. Search twice "
+                   f"{profile.target.primary_role}: {_RESOURCE_KIND}. Search twice "
                    f"with different phrasings, then list what you found with titles and URLs."}],
         output_config={"effort": "low"},
     )
@@ -129,7 +129,7 @@ def find_resources(skill: str, profile: Profile) -> list[Resource]:
 # Close the loop: skill learned -> profile updated
 # ---------------------------------------------------------------------------
 
-def mark_learned(profile: Profile, skill_name: str, evidence: str, category: SkillCategory = "data_engineering") -> Profile:
+def mark_learned(profile: Profile, skill_name: str, evidence: str, category: SkillCategory = PACK.learned_category) -> Profile:
     for s in profile.skills:
         if s.name.lower() == skill_name.lower():
             s.proficiency = "hands_on"

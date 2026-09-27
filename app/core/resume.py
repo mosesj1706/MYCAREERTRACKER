@@ -14,9 +14,15 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import HRFlowable, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from app.core.models import Profile, TailoredOutput
+from reportlab.platypus import Flowable, Image
+
+from app.core.config import DATA_DIR
+from app.core.models import Profile, TailoredOutput, parse_ym
+from app.core.pack import PACK
 from app.core.text import plain
 from connectors import github
+
+PHOTO_PATH = DATA_DIR / "photo.jpg"  # optional CV photo (OT pack; expected in the Gulf)
 
 INK = colors.HexColor("#111318")
 MUTED = colors.HexColor("#5b6272")
@@ -35,8 +41,10 @@ S = {
 }
 
 CATEGORY_LABEL = {"cloud": "Cloud", "data_engineering": "Data", "programming": "Programming", "devops": "DevOps",
-                  "ml_ai": "ML / AI", "databases": "Databases", "tools": "Tools", "soft": "Other"}
-CATEGORY_ORDER = ["cloud", "data_engineering", "programming", "ml_ai", "databases", "devops", "tools"]
+                  "ml_ai": "ML / AI", "databases": "Databases", "tools": "Tools", "soft": "Other"} if PACK.key == "tech" else \
+    {"populations": "Client groups", "assessments": "Assessments", "interventions": "Interventions", "assistive_tech": "Assistive tech",
+     "documentation": "Frameworks", "settings": "Settings", "credentials": "Certified", "soft": "Other"}
+CATEGORY_ORDER = PACK.resume_category_order
 
 
 def _esc(s: str) -> str:
@@ -44,10 +52,10 @@ def _esc(s: str) -> str:
 
 
 def _month(ym: str | None) -> str:
-    if not ym:
+    """'2023-11' -> 'Nov 2023'; a year-only date stays '2023'."""
+    if not ym or parse_ym(ym) is None:
         return "Present"
-    y, m = ym.split("-")
-    return f"{date(int(y), int(m), 1):%b %Y}"
+    return f"{date(*parse_ym(ym), 1):%b %Y}" if "-" in ym else ym.strip()
 
 
 def _link(url: str, label: str | None = None) -> str:
@@ -58,7 +66,9 @@ def _rule():
     return HRFlowable(width="100%", thickness=0.6, color=RULE, spaceBefore=1, spaceAfter=3)
 
 
-def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_title: str | None = None) -> bytes:
+def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_title: str | None = None,
+              include_photo: bool = False) -> bytes:
+    """`include_photo` puts DATA_DIR/photo.jpg top right (the country pack decides; the Gulf expects one)."""
     p = profile
     summary = tailored.summary if tailored else p.summary
     rewrites = {b.original: b.rewritten for b in tailored.bullets} if tailored else {}
@@ -84,6 +94,21 @@ def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_titl
     if pi.github:
         links.append(_link(pi.github, "GitHub"))
     f.append(Paragraph("  ·  ".join([_esc(c) for c in contact] + links), S["contact"]))
+    if PACK.key == "ot":
+        details = [x for x in (f"Nationality: {pi.nationality}" if pi.nationality else None,
+                               f"Date of birth: {pi.date_of_birth}" if pi.date_of_birth else None,
+                               f"Visa: {pi.visa_status}" if pi.visa_status else None,
+                               f"Notice period: {pi.notice_period}" if pi.notice_period else None) if x]
+        if details:
+            f.append(Paragraph("  ·  ".join(_esc(d) for d in details), S["contact"]))
+        licences = [r for r in p.registrations if r.kind in ("licence", "exam", "eligibility") and r.status.lower() not in ("expired",)]
+        if licences:
+            f.append(Paragraph("  ·  ".join(_esc(f"{r.body} {r.kind}: {r.status}") for r in licences), S["contact"]))
+    if include_photo and PHOTO_PATH.exists():
+        # The header is centred; the photo floats in the top-right margin area without moving it.
+        photo = Image(str(PHOTO_PATH), width=24 * mm, height=30 * mm, kind="proportional")
+        photo.hAlign = "RIGHT"
+        f.insert(0, _PhotoCorner(photo))
     f.append(Spacer(1, 4))
 
     # Summary
@@ -125,6 +150,17 @@ def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_titl
                 block.append(Paragraph(f"<font color='#5b6272'>{_esc(', '.join(pr.technologies))}</font>", S["meta"]))
             f.append(KeepTogether(block))
 
+    # Registrations and languages (OT): registration numbers are what a regulator and an HR team check first.
+    if PACK.key == "ot" and p.registrations:
+        f += [Paragraph("REGISTRATIONS & LICENSING", S["h"]), _rule()]
+        for r in p.registrations:
+            bits = [r.body, r.kind, r.number, r.status, (str(r.year) if r.year else None),
+                    (f"valid to {r.expires}" if r.expires else None)]
+            f.append(Paragraph(_esc(" · ".join(b for b in bits if b)), S["body"]))
+    if PACK.key == "ot" and p.languages:
+        f += [Paragraph("LANGUAGES", S["h"]), _rule(),
+              Paragraph(_esc(", ".join(f"{l.name} ({l.level})" for l in p.languages)), S["body"])]
+
     # Education & certifications
     f += [Paragraph("EDUCATION & CERTIFICATIONS", S["h"]), _rule()]
     for ed in p.education:
@@ -158,3 +194,20 @@ def _strip_library_marks(pdf: bytes) -> bytes:
     """
     pdf = pdf.replace(_HEADER_MARK, b" " * len(_HEADER_MARK), 1)
     return pdf.replace(_TRAILER_MARK, b"", 1)
+
+
+class _PhotoCorner(Flowable):
+    """A zero-height flowable that draws the CV photo in the top-right corner of the first page,
+    so the centred name and contact lines keep their position."""
+
+    def __init__(self, image):
+        super().__init__()
+        self.image = image
+
+    def wrap(self, availWidth, availHeight):
+        self._avail = availWidth
+        return 0, 0
+
+    def draw(self):
+        w, h = self.image.wrap(self._avail, 0)
+        self.image.drawOn(self.canv, self._avail - w, -h + 10)

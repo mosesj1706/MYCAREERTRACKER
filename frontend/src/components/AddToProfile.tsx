@@ -5,6 +5,7 @@ import { api, type Profile } from "../lib/api";
 import { Badge, Button, Input, Segmented, Select, Textarea } from "./ui";
 import { Drawer } from "./Drawer";
 import { useToast } from "./Toast";
+import { usePack } from "../lib/pack";
 
 type Kind = "certification" | "course" | "project" | "experience";
 interface Addition { kind: Kind; name: string; org: string; url: string; date: string; end: string; status: "completed" | "in_progress" | "planned"; description: string }
@@ -18,6 +19,13 @@ const KINDS: { value: Kind; label: string; icon: React.ReactNode; org: string; n
   { value: "course", label: "Course", icon: <BookOpen className="size-3.5" />, org: "Provider (Coursera, DataCamp, Udemy…)", name: "Data Engineering on AWS", desc: "What it covered. If you built a project in it, describe the project and link the repo: that is what turns a course into hands-on evidence." },
   { value: "project", label: "Project", icon: <FolderGit2 className="size-3.5" />, org: "For whom (client, personal, hackathon)", name: "nyc-lakehouse-aws", desc: "What it does, what you used, what came out of it. Name the actual services and tools; link the repo. If it is on GitHub, a re-sync will add the code evidence too." },
   { value: "experience", label: "Job", icon: <Briefcase className="size-3.5" />, org: "Company", name: "Data Engineer", desc: "What you did there, one achievement per line. Keep the numbers you know. The model splits this into resume bullets." },
+];
+// OT wording for the same four kinds (the profession pack decides which list shows).
+const OT_KINDS: typeof KINDS = [
+  { value: "certification", label: "Certification", icon: <Award className="size-3.5" />, org: "Issuer (AHA, AIOTA, a hospital, a university…)", name: "BLS Provider", desc: "What it covered. A certificate alone counts as supervised practice; say if you now use it independently with patients." },
+  { value: "course", label: "Course", icon: <BookOpen className="size-3.5" />, org: "Provider (OpenWHO, Physiopedia, AIOTA, a university…)", name: "Constraint-Induced Movement Therapy", desc: "What it covered and whether it had practicals. If you then applied it with patients, describe that: it is what turns a course into independent practice." },
+  { value: "project", label: "Project", icon: <FolderGit2 className="size-3.5" />, org: "Where (department, university, conference)", name: "Case series: CIMT after stroke", desc: "A case series, audit, research or quality project: what you did, which outcome measures, what came out of it. No patient names." },
+  { value: "experience", label: "Job", icon: <Briefcase className="size-3.5" />, org: "Hospital / employer", name: "Occupational Therapist", desc: "What you did there, one duty or achievement per line: client groups, assessments, interventions, caseload. The model splits this into resume bullets." },
 ];
 const PROF_TONE: Record<string, "neutral" | "warn" | "success" | "accent"> = { learning: "neutral", familiar: "warn", hands_on: "success", expert: "accent" };
 const blank = (kind: Kind): Addition => ({ kind, name: "", org: "", url: "", date: "", end: "", status: "completed", description: "" });
@@ -37,7 +45,10 @@ export default function AddToProfile({ open, onClose, initial }: { open: boolean
   const [merge, setMerge] = useState<Merge | null>(null);
   const [applied, setApplied] = useState<Applied | null>(null);
   const [rescored, setRescored] = useState<Rescored[] | null>(null);
-  const meta = KINDS.find((k) => k.value === a.kind)!;
+  const pack = usePack();
+  const kinds = pack.key === "ot" ? OT_KINDS : KINDS;
+  const lvl = (p: string) => pack.proficiency_labels[p as keyof typeof pack.proficiency_labels] ?? p.replace("_", " ");
+  const meta = kinds.find((k) => k.value === a.kind)!;
   const set = (patch: Partial<Addition>) => { setA({ ...a, ...patch }); setMerge(null); setApplied(null); };
   const payload = () => ({ ...a, org: a.org || null, url: a.url || null, date: a.date || null, end: a.end || null });
 
@@ -57,7 +68,7 @@ export default function AddToProfile({ open, onClose, initial }: { open: boolean
   return (
     <Drawer open={open} onClose={onClose} title="Add to profile" width={640}>
       <div className="space-y-5">
-        <Segmented value={a.kind} onChange={(k) => { setA(blank(k)); setMerge(null); setApplied(null); setRescored(null); }} options={KINDS.map((k) => ({ value: k.value, label: <span className="inline-flex items-center gap-1.5">{k.icon}{k.label}</span> }))} />
+        <Segmented value={a.kind} onChange={(k) => { setA(blank(k)); setMerge(null); setApplied(null); setRescored(null); }} options={kinds.map((k) => ({ value: k.value, label: <span className="inline-flex items-center gap-1.5">{k.icon}{k.label}</span> }))} />
         <p className="text-[12.5px] text-muted">{meta.desc}</p>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2"><label className="block text-[11.5px] font-medium text-muted uppercase tracking-wider mb-1">{a.kind === "experience" ? "Title" : "Name"}</label><Input value={a.name} onChange={(e) => set({ name: e.target.value })} placeholder={meta.name} /></div>
@@ -77,13 +88,13 @@ export default function AddToProfile({ open, onClose, initial }: { open: boolean
             <h3 className="text-[13px] font-semibold">Proposed changes</h3>
             {merge.skills.length === 0 && <p className="text-[12.5px] text-muted">No skill changes: the description does not name anything concrete. Add the tools you used and try again, or apply just the entry.</p>}
             {merge.skills.map((s) => (
-              <div key={s.name} className="text-[13px]"><span className="font-medium">{s.name}</span> <Badge tone={PROF_TONE[s.proficiency]} className="ml-1">{s.proficiency.replace("_", " ")}</Badge>
+              <div key={s.name} className="text-[13px]"><span className="font-medium">{s.name}</span> <Badge tone={PROF_TONE[s.proficiency]} className="ml-1">{lvl(s.proficiency)}</Badge>
                 <div className="text-[12.5px] text-muted">{s.evidence}</div></div>
             ))}
             {merge.experience?.bullets && <div className="text-[12.5px]"><div className="block text-[11.5px] font-medium text-muted uppercase tracking-wider mb-1">Bullets</div><ul className="list-disc pl-5 text-muted space-y-0.5">{merge.experience.bullets.map((b, i) => <li key={i}>{b}</li>)}</ul></div>}
             {merge.resolved_risk_flags.length > 0 && <div className="text-[12.5px]"><span className="text-success font-medium">Settles:</span> {merge.resolved_risk_flags.join(" · ")}</div>}
             {merge.notes.map((n, i) => <p key={i} className="text-[12.5px] text-warn">{n}</p>)}
-            <p className="text-[11.5px] text-faint">Applied with fixed rules: proficiency only rises, a certificate or course alone is capped at familiar, nothing is removed.</p>
+            <p className="text-[11.5px] text-faint">Applied with fixed rules: proficiency only rises, a certificate or course alone is capped at {lvl("familiar").toLowerCase()}, nothing is removed.</p>
             <div className="flex justify-end gap-2"><Button size="sm" onClick={() => setMerge(null)}>Edit</Button><Button size="sm" variant="primary" loading={apply.isPending} onClick={() => apply.mutate()}>Apply to profile</Button></div>
           </div>
         )}
@@ -92,7 +103,7 @@ export default function AddToProfile({ open, onClose, initial }: { open: boolean
           <div className="space-y-3 rounded-lg border border-success/30 bg-success-soft/30 p-4">
             <h3 className="text-[13px] font-semibold">Added</h3>
             {applied.changes.length > 0
-              ? <div className="flex flex-wrap gap-1.5">{applied.changes.map((c) => <Badge key={c.skill} tone={PROF_TONE[c.to]}>{c.skill}: {c.from ? `${c.from.replace("_", " ")} → ` : "new · "}{c.to.replace("_", " ")}</Badge>)}</div>
+              ? <div className="flex flex-wrap gap-1.5">{applied.changes.map((c) => <Badge key={c.skill} tone={PROF_TONE[c.to]}>{c.skill}: {c.from ? `${lvl(c.from)} → ` : "new · "}{lvl(c.to)}</Badge>)}</div>
               : <p className="text-[12.5px] text-muted">Entry added; no proficiency changed (evidence was appended).</p>}
             {applied.applications > 0 && !rescored && (
               <div className="flex items-center justify-between gap-3 text-[12.5px]">

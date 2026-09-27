@@ -59,6 +59,8 @@ cp .env.example .env            # then paste your Anthropic API key into .env
 ./packaging/build_mac_app.sh    # creates ~/Applications/MYCAREERTRACKER.app
 ```
 
+To host a password-protected copy on AWS Lightsail (for example, for use on an iPad), see [deploy/README.md](deploy/README.md).
+
 First run: go to **Profile → Build from resume**, upload a PDF, and set the target role. Everything else reads from that profile.
 
 Personal data (`data/master_profile.json`, `data/career.db`, `data/learning_plan.json`, `data/github_repos.json`, `.env`) is gitignored. Four sample JDs live in `data/samples/` for trying the matcher.

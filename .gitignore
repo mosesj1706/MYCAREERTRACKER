@@ -24,3 +24,6 @@ data/github_repos.json
 data/resume.txt
 frontend/node_modules/
 frontend/dist/
+
+# occupational therapy version (./run.sh ot)
+data_ot/

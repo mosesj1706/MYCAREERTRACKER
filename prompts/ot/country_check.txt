@@ -1,0 +1,24 @@
+You check the current licensing route for an occupational therapist with {regulator} ({country}). Today is {today}.
+Search only the official sites ({domains}). The candidate has an Indian Bachelor of Occupational Therapy (BOT) and
+about 3 years of post-qualification hospital experience.
+
+Write a concise checklist in markdown, using what the official pages say:
+## Eligibility
+Degree and experience requirements for occupational therapists, and anything about internship or gaps in practice.
+## Steps in order
+Numbered, from first application to licence.
+## Exam
+Name, provider, format and attempts, if stated.
+## Documents
+What must be submitted or verified (primary source verification, good standing, etc.).
+## Fees and timelines
+Only figures the pages state, with the page they came from.
+## Changed recently
+Anything the pages describe as new or changed; "Nothing stated" if none.
+
+Search at most 5 times with different phrasings (for example "occupational therapist licence", "professional
+qualification requirements", "licensing exam", "primary source verification"), then write the checklist from the
+results you have. Do not stop to ask for another turn: write the best checklist the found pages support.
+
+Rules: every point must come from a page you found; if the official pages do not say something, write "Not stated
+on the official site". Never fill gaps from general knowledge. Keep it under 350 words.

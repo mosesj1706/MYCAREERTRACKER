@@ -2,9 +2,10 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { clsx } from "clsx";
-import { ExternalLink, GripVertical, RefreshCw, Trash2, Target, ChevronRight, Download, Wand2 } from "lucide-react";
-import { api, type Application } from "../lib/api";
-import { Badge, Button, Empty, Gauge, PageHeader, Textarea, Input } from "../components/ui";
+import { ExternalLink, GripVertical, RefreshCw, Trash2, Target, ChevronRight, Download, Wand2, AlertTriangle, Mail } from "lucide-react";
+import { api, type Agency, type Application, type CountriesPayload } from "../lib/api";
+import { flag, usePack } from "../lib/pack";
+import { Badge, Button, Empty, Gauge, PageHeader, Textarea, Input, Select } from "../components/ui";
 import { Drawer } from "../components/Drawer";
 import { CopyBlock } from "../components/Copy";
 import { TellCheck } from "../components/TellCheck";
@@ -60,7 +61,7 @@ export default function Applications() {
         <Empty title="Nothing tracked yet" body="Analyze a job description and click Track — it lands here with the full fit assessment attached." action={<Link to="/tailor"><Button variant="primary">Analyze a job</Button></Link>} />
       ) : (
         <DndContext sensors={sensors} onDragStart={(e: DragStartEvent) => setDragging(q.data!.items.find((a) => a.id === Number(e.active.id)) ?? null)} onDragEnd={onDragEnd}>
-          <div className="grid grid-flow-col auto-cols-[minmax(230px,1fr)] gap-3 items-start overflow-x-auto pb-3 -mx-8 px-8">
+          <div className="grid grid-flow-col auto-cols-[minmax(230px,1fr)] gap-3 items-start overflow-x-auto pb-3 -mx-4 px-4 md:-mx-8 md:px-8">
             {COLS.map((c) => <Column key={c.key} col={c} items={byCol[c.key] ?? []} onOpen={setOpenId} />)}
           </div>
           <DragOverlay>{dragging ? <CardView a={dragging} overlay /> : null}</DragOverlay>
@@ -87,7 +88,7 @@ function DraggableCard({ a, onOpen }: { a: Application; onOpen: (id: number) => 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: a.id });
   return (
     <div ref={setNodeRef} {...attributes} className={clsx(isDragging && "opacity-30")}>
-      <CardView a={a} onOpen={() => onOpen(a.id)} handle={<button {...listeners} className="text-faint hover:text-muted cursor-grab active:cursor-grabbing -ml-1" title="Drag"><GripVertical className="size-4" /></button>} />
+      <CardView a={a} onOpen={() => onOpen(a.id)} handle={<button {...listeners} className="touch-none p-2 -my-2 -ml-3 -mr-2 text-faint hover:text-muted cursor-grab active:cursor-grabbing" title="Drag"><GripVertical className="size-4" /></button>} />
     </div>
   );
 }
@@ -100,20 +101,22 @@ function CardView({ a, onOpen, handle, overlay }: { a: Application; onOpen?: () 
         {handle}
         <div className="flex-1 min-w-0">
           <div className="text-[13px] font-semibold leading-snug line-clamp-2">{a.title}</div>
-          <div className="text-[12px] text-muted truncate mt-0.5">{a.company || "—"}</div>
+          <div className="text-[12px] text-muted truncate mt-0.5">{a.country && <span className="mr-1" title={a.country}>{flag(a.country)}</span>}{a.company || "—"}</div>
         </div>
         <span className={clsx("num text-[12px] font-semibold px-1.5 py-0.5 rounded-md shrink-0", tone === "success" ? "bg-success-soft text-success" : tone === "warn" ? "bg-warn-soft text-warn" : "bg-danger-soft text-danger")}>{Math.round(a.match_score)}%</span>
       </div>
-      <div className="flex items-center justify-between mt-2 text-[11.5px] text-faint"><span>{timeAgo(a.updated_at)}</span>{onOpen && <ChevronRight className="size-3.5 opacity-0 group-hover:opacity-100 transition" />}</div>
+      <div className="flex items-center justify-between mt-2 text-[11.5px] text-faint"><span>{timeAgo(a.updated_at)}</span>{onOpen && <ChevronRight className="size-3.5 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition" />}</div>
     </div>
   );
 }
 
 function Detail({ a, onClose }: { a: Application; onClose: () => void }) {
-  const qc = useQueryClient(); const toast = useToast();
+  const qc = useQueryClient(); const toast = useToast(); const pack = usePack(); const ot = pack.key === "ot";
   const [notes, setNotes] = useState(a.notes); const [url, setUrl] = useState(a.url ?? "");
+  const [country, setCountry] = useState(a.country ?? ""); const [agency, setAgency] = useState<Agency>(a.agency ?? {});
+  const ctry = useQuery({ queryKey: ["countries"], queryFn: () => api.get<CountriesPayload>("/api/countries"), enabled: ot });
   const inval = () => { qc.invalidateQueries({ queryKey: ["applications"] }); qc.invalidateQueries({ queryKey: ["analytics"] }); qc.invalidateQueries({ queryKey: ["gaps"] }); };
-  const save = useMutation({ mutationFn: () => api.patch(`/api/applications/${a.id}`, { notes, url: url || null }), onSuccess: () => { inval(); toast("success", "Saved."); } });
+  const save = useMutation({ mutationFn: () => api.patch(`/api/applications/${a.id}`, ot ? { notes, url: url || null, country: country || null, agency } : { notes, url: url || null }), onSuccess: () => { inval(); toast("success", "Saved."); } });
   const rescore = useMutation({ mutationFn: () => api.post<Application>(`/api/applications/${a.id}/rescore`), onSuccess: (r) => { inval(); toast("success", `Re-scored: ${Math.round(a.match_score)}% → ${Math.round(r.match_score)}%`); }, onError: (e) => toast("error", (e as Error).message) });
   const del = useMutation({ mutationFn: () => api.del(`/api/applications/${a.id}`), onSuccess: () => { inval(); onClose(); toast("info", "Deleted."); } });
   const tailorIt = useMutation({ mutationFn: () => api.post<Application>(`/api/applications/${a.id}/tailor`), onSuccess: () => { inval(); toast("success", a.tailored ? "Re-tailored against the current profile." : "Tailored: summary, bullets and cover letter are below; the resume PDF is ready."); }, onError: (e) => toast("error", (e as Error).message) });
@@ -133,11 +136,30 @@ function Detail({ a, onClose }: { a: Application; onClose: () => void }) {
       <div className="grid grid-cols-2 gap-2">
         <Button onClick={() => rescore.mutate()} loading={rescore.isPending}><RefreshCw className="size-4" /> Re-score with current profile</Button>
         <Link to="/interview" state={{ app_id: a.id }}><Button className="w-full">Practice for this job</Button></Link>
+        {ot && <Link to="/cover-letters" state={{ app_id: a.id }}><Button className="w-full"><Mail className="size-4" /> Write cover letter</Button></Link>}
         <Button onClick={() => tailorIt.mutate()} loading={tailorIt.isPending} title="Rewrites the summary and bullets for this JD and drafts the cover letter. One model call, about a minute."><Wand2 className="size-4" /> {a.tailored ? "Re-tailor for this job" : "Tailor resume for this job"}</Button>
         {a.tailored && <a href={`/api/applications/${a.id}/resume.pdf`} download><Button className="w-full"><Download className="size-4" /> Tailored resume PDF</Button></a>}
       </div>
+      {ot && (a.job.licence_required || a.job.facility_type || (a.job.package?.length ?? 0) > 0) && (
+        <div className="text-[13px] flex flex-wrap gap-1.5">{a.job.licence_required && <Badge tone="warn">Licence: {a.job.licence_required}</Badge>}{a.job.facility_type && <Badge>{a.job.facility_type}</Badge>}{a.job.package?.map((x) => <Badge key={x} tone="success">{x}</Badge>)}</div>
+      )}
       <div className="space-y-2">
-        <label className="text-[12px] font-medium text-muted uppercase tracking-wider">Job URL</label>
+        {ot && (
+          <>
+            <label className="text-[12px] font-medium text-muted uppercase tracking-wider">Country</label>
+            <Select value={country} onChange={(e) => setCountry(e.target.value)} className="w-full"><option value="">Not set</option>{ctry.data?.countries.map((c) => <option key={c.code} value={c.code}>{flag(c.code)} {c.name}</option>)}</Select>
+            <label className="text-[12px] font-medium text-muted uppercase tracking-wider block pt-1">Recruitment agency</label>
+            <div className="grid grid-cols-2 gap-2">
+              <Input value={agency.name ?? ""} onChange={(e) => setAgency({ ...agency, name: e.target.value })} placeholder="Agency name (if any)" />
+              <Input value={agency.mea_registration ?? ""} onChange={(e) => setAgency({ ...agency, mea_registration: e.target.value })} placeholder="MEA registration no." />
+              <Input value={agency.contact ?? ""} onChange={(e) => setAgency({ ...agency, contact: e.target.value })} placeholder="Contact person / phone" className="col-span-2" />
+            </div>
+            <label className="flex items-center gap-2 text-[13px] cursor-pointer"><input type="checkbox" className="size-4 accent-[var(--accent)]" checked={!!agency.fee_asked} onChange={() => setAgency({ ...agency, fee_asked: !agency.fee_asked })} /> The agency asked me to pay a fee</label>
+            {agency.fee_asked && <div className="rounded-lg border border-danger/40 bg-danger-soft/40 px-3 py-2.5 text-[12.5px] flex gap-2"><AlertTriangle className="size-4 text-danger shrink-0 mt-0.5" /><span>Warning sign. A genuine employer or agency doesn't charge candidates for a job offer. In India, check the agency's licence on the Ministry of External Affairs' eMigrate site before paying anything.</span></div>}
+            {agency.name && !agency.mea_registration && !agency.fee_asked && <div className="text-[12px] text-muted">Tip: ask for their MEA registration number and check it on eMigrate.</div>}
+          </>
+        )}
+        <label className="text-[12px] font-medium text-muted uppercase tracking-wider block pt-1">Job URL</label>
         <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
         <label className="text-[12px] font-medium text-muted uppercase tracking-wider">Notes</label>
         <Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Recruiter name, dates, what they asked, next step…" />

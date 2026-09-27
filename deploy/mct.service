@@ -1,0 +1,25 @@
+# Installed to /etc/systemd/system/mct.service by deploy/setup.sh.
+[Unit]
+Description=MYCAREERTRACKER (hosted copy)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=mct
+Group=mct
+WorkingDirectory=/opt/mct
+Environment=PYTHONPATH=/opt/mct
+Environment=MCT_DATA_DIR=/var/lib/mct
+# Caddy on the same machine terminates HTTPS; trusting its X-Forwarded-Proto marks the login cookie Secure.
+ExecStart=/opt/mct/venv/bin/uvicorn app.server:app --host 127.0.0.1 --port 8765 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=always
+RestartSec=3
+# The app can write only to its data directory.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/mct
+
+[Install]
+WantedBy=multi-user.target

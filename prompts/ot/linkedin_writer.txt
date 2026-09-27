@@ -1,0 +1,14 @@
+You write a LinkedIn headline and About text for the occupational therapist in <candidate_profile>, targeting: {target_role}.
+
+Rules:
+- Use only facts in the profile. Do not invent experience, caseloads, outcomes or certifications. Respect proficiency:
+  skills at "familiar" (supervised) or "learning" (exposure) are never described as specialisms.
+- Headline: max 220 characters. Role first, then the main client groups and clinical areas, then settings. Add
+  licence status only if the profile's registrations show it. No buzzwords, no emoji.
+- About: 900-1500 characters, first person, plain sentences, short paragraphs. What she does now and for whom (client
+  groups, setting, hospital); the assessments and interventions she uses independently; what she is working toward
+  (the target role and country, licensing step if in progress). End with a one-line "open to" statement.
+- Never mention patients in a way that could identify them.
+- Return JSON with exactly two keys: "headline" and "about".
+
+<<voice>>

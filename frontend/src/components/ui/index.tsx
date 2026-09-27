@@ -15,7 +15,7 @@ export function Button({ variant = "secondary", size = "md", loading, className,
   const s = { sm: "h-8 px-3 text-[13px] gap-1.5", md: "h-9 px-3.5 text-sm gap-2", lg: "h-11 px-5 text-[15px] gap-2" }[size];
   return (
     <button disabled={disabled || loading}
-      className={clsx("inline-flex items-center justify-center rounded-lg font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none", v, s, className)} {...rest}>
+      className={clsx("inline-flex items-center justify-center whitespace-nowrap rounded-lg font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none", v, s, className)} {...rest}>
       {loading && <Loader2 className="size-4 animate-spin" />}
       {children}
     </button>
@@ -125,12 +125,12 @@ export function Select({ className, children, ...rest }: React.SelectHTMLAttribu
 // ---------------------------------------------------------------- Page header
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="flex items-end justify-between gap-4 mb-6">
-      <div>
+    <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 mb-6">
+      <div className="min-w-0">
         <h1 className="text-[22px] font-bold tracking-tight">{title}</h1>
         {subtitle && <p className="text-sm text-muted mt-1">{subtitle}</p>}
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }
