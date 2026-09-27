@@ -5,7 +5,7 @@ import { clsx } from "clsx";
 import { ExternalLink, GripVertical, RefreshCw, Trash2, Target, ChevronRight, Download, Wand2, AlertTriangle, Mail } from "lucide-react";
 import { api, type Agency, type Application, type CountriesPayload } from "../lib/api";
 import { flag, usePack } from "../lib/pack";
-import { Badge, Button, Empty, Gauge, PageHeader, Textarea, Input, Select } from "../components/ui";
+import { Badge, Button, Empty, Gauge, PageHeader, Textarea, Input, Select, SwitchRow } from "../components/ui";
 import { Drawer } from "../components/Drawer";
 import { CopyBlock } from "../components/Copy";
 import { TellCheck } from "../components/TellCheck";
@@ -138,7 +138,7 @@ function Detail({ a, onClose }: { a: Application; onClose: () => void }) {
         <Link to="/interview" state={{ app_id: a.id }}><Button className="w-full">Practice for this job</Button></Link>
         {ot && <Link to="/cover-letters" state={{ app_id: a.id }}><Button className="w-full"><Mail className="size-4" /> Write cover letter</Button></Link>}
         <Button onClick={() => tailorIt.mutate()} loading={tailorIt.isPending} title="Rewrites the summary and bullets for this JD and drafts the cover letter. One model call, about a minute."><Wand2 className="size-4" /> {a.tailored ? "Re-tailor for this job" : "Tailor resume for this job"}</Button>
-        {a.tailored && <a href={`/api/applications/${a.id}/resume.pdf`} download><Button className="w-full"><Download className="size-4" /> Tailored resume PDF</Button></a>}
+        {a.tailored && <a href={`/api/applications/${a.id}/resume.pdf`} download><Button className="w-full"><Download className="size-4" /> {ot ? `Tailored CV${a.country ? ` · ${flag(a.country)} format` : ""}` : "Tailored resume PDF"}</Button></a>}
       </div>
       {ot && (a.job.licence_required || a.job.facility_type || (a.job.package?.length ?? 0) > 0) && (
         <div className="text-[13px] flex flex-wrap gap-1.5">{a.job.licence_required && <Badge tone="warn">Licence: {a.job.licence_required}</Badge>}{a.job.facility_type && <Badge>{a.job.facility_type}</Badge>}{a.job.package?.map((x) => <Badge key={x} tone="success">{x}</Badge>)}</div>
@@ -154,7 +154,7 @@ function Detail({ a, onClose }: { a: Application; onClose: () => void }) {
               <Input value={agency.mea_registration ?? ""} onChange={(e) => setAgency({ ...agency, mea_registration: e.target.value })} placeholder="MEA registration no." />
               <Input value={agency.contact ?? ""} onChange={(e) => setAgency({ ...agency, contact: e.target.value })} placeholder="Contact person / phone" className="col-span-2" />
             </div>
-            <label className="flex items-center gap-2 text-[13px] cursor-pointer"><input type="checkbox" className="size-4 accent-[var(--accent)]" checked={!!agency.fee_asked} onChange={() => setAgency({ ...agency, fee_asked: !agency.fee_asked })} /> The agency asked me to pay a fee</label>
+            <div className="rounded-[12px] bg-fill-2 px-4 py-0.5"><SwitchRow checked={!!agency.fee_asked} onChange={(v) => setAgency({ ...agency, fee_asked: v })}>The agency asked me to pay a fee</SwitchRow></div>
             {agency.fee_asked && <div className="rounded-lg border border-danger/40 bg-danger-soft/40 px-3 py-2.5 text-[12.5px] flex gap-2"><AlertTriangle className="size-4 text-danger shrink-0 mt-0.5" /><span>Warning sign. A genuine employer or agency doesn't charge candidates for a job offer. In India, check the agency's licence on the Ministry of External Affairs' eMigrate site before paying anything.</span></div>}
             {agency.name && !agency.mea_registration && !agency.fee_asked && <div className="text-[12px] text-muted">Tip: ask for their MEA registration number and check it on eMigrate.</div>}
           </>

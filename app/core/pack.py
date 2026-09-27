@@ -17,7 +17,8 @@ from app.core import config  # noqa: F401  (loads .env, which may set MCT_PROFES
 class Pack:
     key: str
     app_name: str
-    mark: str
+    mark: str                               # the wordmark in the app icon
+    home_name: str                          # name under the icon on an iPad home screen (keep it short)
     default_role: str
     categories: dict[str, str]              # key -> label, in display order
     resume_category_order: list[str]
@@ -38,6 +39,7 @@ TECH = Pack(
     key="tech",
     app_name="MYCAREERTRACKER",
     mark="MCT",
+    home_name="MCT",
     default_role="Cloud Data Engineer (AWS)",
     categories={"cloud": "Cloud", "data_engineering": "Data engineering", "programming": "Programming", "devops": "DevOps",
                 "ml_ai": "ML / AI", "databases": "Databases", "tools": "Tools", "soft": "Soft skills"},
@@ -77,8 +79,9 @@ TECH = Pack(
 
 OT = Pack(
     key="ot",
-    app_name="OT Career Tracker",
-    mark="OT",
+    app_name="MED Career Tracker",
+    mark="MED",
+    home_name="MED Tracker",
     default_role="Occupational Therapist, Neuro Rehab",
     categories={"assessments": "Assessments & outcome measures", "interventions": "Interventions & techniques",
                 "populations": "Client populations", "settings": "Practice settings",

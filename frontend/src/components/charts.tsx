@@ -1,15 +1,15 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, LineChart, Line, LabelList } from "recharts";
 
-export const SERIES = ["#4f6bff", "#eb6834", "#1baf7a", "#eda100"];
+export const SERIES = ["#007aff", "#ff9500", "#34c759", "#af52de"];  // Apple system blue, orange, green, purple
 const tick = { fill: "var(--muted)", fontSize: 12 };
-const tooltipStyle = { contentStyle: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 13, boxShadow: "var(--shadow)" }, labelStyle: { color: "var(--muted)" }, cursor: { fill: "var(--surface-2)" } };
+const tooltipStyle = { contentStyle: { background: "var(--hud)", border: "none", borderRadius: 12, fontSize: 13, boxShadow: "var(--shadow-lg)", backdropFilter: "blur(20px)" }, labelStyle: { color: "var(--muted)" }, cursor: { fill: "var(--fill-2)" } };
 
 export function WeeklyActivity({ rows }: { rows: { week: string; activity: string; count: number }[] }) {
   const acts = ["JDs analyzed", "Applied", "Mock interviews", "MCQs answered"];
   const weeks = [...new Set(rows.map((r) => r.week))].sort();
   const data = weeks.map((w) => ({ week: w, ...Object.fromEntries(acts.map((a) => [a, rows.find((r) => r.week === w && r.activity === a)?.count ?? 0])) }));
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ResponsiveContainer debounce={80} width="100%" height={220}>
       <BarChart data={data} barGap={3} barCategoryGap={24}>
         <CartesianGrid vertical={false} stroke="var(--border)" />
         <XAxis dataKey="week" tick={tick} axisLine={false} tickLine={false} />
@@ -24,13 +24,15 @@ export function WeeklyActivity({ rows }: { rows: { week: string; activity: strin
 
 export function Funnel({ rows }: { rows: { stage: string; count: number }[] }) {
   return (
-    <ResponsiveContainer width="100%" height={200}>
+    <ResponsiveContainer debounce={80} width="100%" height={200}>
       <BarChart data={rows} layout="vertical" barCategoryGap={10}>
         <CartesianGrid horizontal={false} stroke="var(--border)" />
         <XAxis type="number" tick={tick} axisLine={false} tickLine={false} allowDecimals={false} />
         <YAxis type="category" dataKey="stage" tick={tick} axisLine={false} tickLine={false} width={72} />
         <Tooltip {...tooltipStyle} />
-        <Bar dataKey="count" fill={SERIES[0]} radius={[0, 4, 4, 0]} maxBarSize={18}>
+        {/* No entrance animation here: a LabelList inside an animated Bar loops re-renders when the
+            container resizes (sidebar show/hide) in Recharts 3 and crashes the page. */}
+        <Bar dataKey="count" fill={SERIES[0]} radius={[0, 4, 4, 0]} maxBarSize={18} isAnimationActive={false}>
           <LabelList dataKey="count" position="right" style={{ fill: "var(--muted)", fontSize: 12 }} />
         </Bar>
       </BarChart>
@@ -40,7 +42,7 @@ export function Funnel({ rows }: { rows: { stage: string; count: number }[] }) {
 
 export function McqTrend({ rows }: { rows: { week: string; accuracy: number; answered: number }[] }) {
   return (
-    <ResponsiveContainer width="100%" height={200}>
+    <ResponsiveContainer debounce={80} width="100%" height={200}>
       <LineChart data={rows}>
         <CartesianGrid vertical={false} stroke="var(--border)" />
         <XAxis dataKey="week" tick={tick} axisLine={false} tickLine={false} />

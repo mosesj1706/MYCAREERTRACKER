@@ -8,7 +8,7 @@ from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
 
 from app.core import countries, cpd, documents, letters, profile as profile_store, tracker
-from app.core.resume import PHOTO_PATH
+from app.core.cv_ot import PHOTO_PATH
 
 router = APIRouter(prefix="/api")
 
@@ -23,6 +23,7 @@ def _profile():
 def _countries_payload() -> dict:
     prog = countries.progress()
     return {"countries": countries.all_countries(), "selection": countries.selection(), "progress": prog,
+            "cv_standard": countries.cv_format(None),
             "summaries": [countries.route_summary(r, prog) for r in countries.tracked_routes()],
             "checks": {r: countries.last_check(r) for c in countries.all_countries() for r in [x["id"] for x in c["routes"]] if countries.last_check(r)}}
 

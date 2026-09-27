@@ -1,8 +1,10 @@
 {
   "_about": "Country packs for occupational therapists. Built-in steps are the usual pattern as of September 2026, not legal advice: every route links its regulator, and 'Check current rules' searches the official sites live. Document keys refer to the document categories in app/core/documents.py.",
   "verified": "2026-09",
+  "cv_standard": {"photo": "avoid", "details": [], "paper": "A4", "document": "CV", "pages": "2 pages", "references": false},
   "regions": {
     "gulf": {
+      "cv_format": {"photo": "expected", "details": ["nationality", "date_of_birth", "visa_status", "notice_period"], "paper": "A4", "document": "CV", "pages": "2-3 pages", "references": false},
       "language_test": "Not usually required for the licence; English is the working language. Arabic basics help with patients.",
       "cv_norms": [
         "A professional photo is usual and expected by many employers.",
@@ -126,6 +128,10 @@
       "code": "GB", "name": "United Kingdom", "region": "other", "currency": "GBP", "live_only": true,
       "summary": "Regulated by the Health and Care Professions Council (HCPC). Built-in steps are not added yet: use 'Check current rules' to pull the route from the HCPC site.",
       "language_test": "Usually required (IELTS or OET). Check the HCPC's current scores.",
+      "cv_format": {"photo": "avoid", "details": ["visa_status", "notice_period"], "paper": "A4", "document": "CV", "pages": "2 pages", "references": true},
+      "cv_norms": ["No photo, date of birth or marital status: UK employers avoid them to stay clear of bias claims under the Equality Act 2010.", "Put your HCPC registration number near the top, or 'HCPC registration: application in progress'.", "Two pages, reverse-chronological, plain British English.", "State your right to work, e.g. 'Requires Skilled Worker visa sponsorship'.", "NHS posts are applied for on NHS Jobs with a supporting statement; the CV supports it."],
+      "cover_letter_norms": ["NHS: a supporting statement that answers the person specification point by point, with examples.", "Other employers: a one-page cover letter matched to the job description."],
+      "interview_style": "NHS interviews are usually panel interviews: values-based questions linked to the NHS Constitution, clinical scenarios, and sometimes a short presentation.",
       "routes": [{"id": "gb-hcpc", "regulator": "HCPC", "regulator_full": "Health and Care Professions Council", "area": "United Kingdom",
                   "official_url": "https://www.hcpc-uk.org", "check_domains": ["hcpc-uk.org"], "steps": []}]
     },
@@ -133,6 +139,10 @@
       "code": "IE", "name": "Ireland", "region": "other", "currency": "EUR", "live_only": true,
       "summary": "Regulated by CORU's Occupational Therapists Registration Board. Use 'Check current rules' for the recognition route.",
       "language_test": "Usually required for applicants educated outside Ireland. Check CORU's current rules.",
+      "cv_format": {"photo": "avoid", "details": ["visa_status", "notice_period"], "paper": "A4", "document": "CV", "pages": "2 pages", "references": true},
+      "cv_norms": ["No photo or date of birth.", "Put your CORU registration (or application status) near the top.", "Two pages, reverse-chronological.", "State your work permit status if you need one."],
+      "cover_letter_norms": ["One page, matched to the job specification. HSE posts often use their own application form."],
+      "interview_style": "HSE and hospital interviews are usually competency-based panel interviews with clinical scenarios.",
       "routes": [{"id": "ie-coru", "regulator": "CORU", "regulator_full": "CORU, Occupational Therapists Registration Board", "area": "Ireland",
                   "official_url": "https://www.coru.ie", "check_domains": ["coru.ie"], "steps": []}]
     },
@@ -140,6 +150,10 @@
       "code": "AU", "name": "Australia", "region": "other", "currency": "AUD", "live_only": true,
       "summary": "Overseas-qualified OTs are assessed by the Occupational Therapy Council (OTC) and registered with the Occupational Therapy Board of Australia through Ahpra.",
       "language_test": "Usually required (IELTS, OET or similar). Check the Board's English language standard.",
+      "cv_format": {"photo": "avoid", "details": ["visa_status", "notice_period"], "paper": "A4", "document": "CV", "pages": "2-4 pages", "references": true},
+      "cv_norms": ["No photo or date of birth.", "Put your AHPRA registration number near the top, or 'OTC assessment in progress'.", "Australian CVs can run to three or four pages; keep it reverse-chronological.", "Public health jobs ask you to address selection criteria in a separate document.", "Referees: two recent clinical supervisors, or 'available on request'."],
+      "cover_letter_norms": ["One page. For public health jobs, the selection-criteria response matters more than the letter."],
+      "interview_style": "Panel interviews with behavioural questions against the selection criteria, clinical scenarios, then referee checks.",
       "routes": [{"id": "au-otba", "regulator": "OTC / OTBA", "regulator_full": "Occupational Therapy Council and Occupational Therapy Board of Australia", "area": "Australia",
                   "official_url": "https://www.otcouncil.com.au", "check_domains": ["otcouncil.com.au", "occupationaltherapyboard.gov.au", "ahpra.gov.au"], "steps": []}]
     },
@@ -147,6 +161,10 @@
       "code": "NZ", "name": "New Zealand", "region": "other", "currency": "NZD", "live_only": true,
       "summary": "Regulated by the Occupational Therapy Board of New Zealand.",
       "language_test": "Usually required. Check the Board's current rules.",
+      "cv_format": {"photo": "avoid", "details": ["visa_status", "notice_period"], "paper": "A4", "document": "CV", "pages": "2-3 pages", "references": true},
+      "cv_norms": ["No photo or date of birth.", "Put your OTBNZ registration (or application status) near the top.", "Referees: two recent clinical supervisors, or 'available on request'."],
+      "cover_letter_norms": ["One page, matched to the position description."],
+      "interview_style": "Panel interviews with behavioural questions and clinical scenarios; expect questions on cultural safety and working with Maori whanau.",
       "routes": [{"id": "nz-otbnz", "regulator": "OTBNZ", "regulator_full": "Occupational Therapy Board of New Zealand", "area": "New Zealand",
                   "official_url": "https://www.otboard.org.nz", "check_domains": ["otboard.org.nz"], "steps": []}]
     },
@@ -154,6 +172,10 @@
       "code": "CA", "name": "Canada", "region": "other", "currency": "CAD", "live_only": true,
       "summary": "Internationally educated OTs start with ACOTRO's substantial equivalency assessment, then register with the college in their province.",
       "language_test": "Usually required. Check ACOTRO and the provincial college.",
+      "cv_format": {"photo": "avoid", "details": ["visa_status"], "paper": "Letter", "document": "Resume", "pages": "2 pages", "references": false},
+      "cv_norms": ["No photo, date of birth or marital status.", "Show your provincial college registration or ACOTRO assessment status near the top.", "Two pages on US Letter paper.", "State your work permit status."],
+      "cover_letter_norms": ["One page, matched to the posting."],
+      "interview_style": "Behavioural (STAR) interviews plus clinical scenarios.",
       "routes": [{"id": "ca-acotro", "regulator": "ACOTRO", "regulator_full": "Association of Canadian Occupational Therapy Regulatory Organizations", "area": "Canada",
                   "official_url": "https://www.acotro-acore.org", "check_domains": ["acotro-acore.org"], "steps": []}]
     },
@@ -161,6 +183,10 @@
       "code": "US", "name": "United States", "region": "other", "currency": "USD", "live_only": true,
       "summary": "The NBCOT certification exam plus a licence from the state you will work in.",
       "language_test": "Usually required for internationally educated candidates. Check NBCOT's rules.",
+      "cv_format": {"photo": "avoid", "details": ["visa_status"], "paper": "Letter", "document": "Resume", "pages": "1-2 pages", "references": false},
+      "cv_norms": ["Never add a photo, age or date of birth: US employers avoid them because of EEOC and age-discrimination rules.", "Put NBCOT certification and state licence status in a Licensure section near the top.", "One to two pages on US Letter paper.", "State work authorisation, e.g. 'Requires H-1B sponsorship'."],
+      "cover_letter_norms": ["One page, matched to the posting."],
+      "interview_style": "Behavioural (STAR) interviews plus clinical scenarios; salary usually comes later.",
       "routes": [{"id": "us-nbcot", "regulator": "NBCOT", "regulator_full": "National Board for Certification in Occupational Therapy", "area": "United States",
                   "official_url": "https://www.nbcot.org", "check_domains": ["nbcot.org"], "steps": []}]
     },
@@ -168,6 +194,10 @@
       "code": "SG", "name": "Singapore", "region": "other", "currency": "SGD", "live_only": true,
       "summary": "Regulated by the Allied Health Professions Council (AHPC).",
       "language_test": "May be required. Check the AHPC's current rules.",
+      "cv_format": {"photo": "optional", "details": ["visa_status", "notice_period"], "paper": "A4", "document": "CV", "pages": "2 pages", "references": false},
+      "cv_norms": ["A photo is optional and declining: fair-employment guidelines (TAFEP) advise employers not to ask for one.", "State your work pass status or eligibility; leave out date of birth, NRIC and marital status.", "Put AHPC registration status near the top.", "Two pages."],
+      "cover_letter_norms": ["One page, matched to the posting; mention work pass status."],
+      "interview_style": "Panel interviews with clinical scenarios, plus questions on work pass and availability.",
       "routes": [{"id": "sg-ahpc", "regulator": "AHPC", "regulator_full": "Allied Health Professions Council", "area": "Singapore",
                   "official_url": "https://www.healthprofessionals.gov.sg/ahpc", "check_domains": ["healthprofessionals.gov.sg"], "steps": []}]
     }

@@ -12,6 +12,8 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
+from app.core.pack import PACK
+
 COOKIE = "mct_session"
 MAX_AGE = 30 * 24 * 3600
 # Reachable without a session: the login page itself, and what Safari fetches for Add to Home Screen.
@@ -53,7 +55,9 @@ class LoginRequired:
 
 
 def _page(error: str = "", status: int = 200) -> HTMLResponse:
-    return HTMLResponse(_PAGE.replace("{error}", f'<p class="err">{error}</p>' if error else ""), status_code=status)
+    html = (_PAGE.replace("{error}", f'<p class="err">{error}</p>' if error else "")
+            .replace("{app_name}", PACK.app_name).replace("{mark}", PACK.mark).replace("{home_name}", PACK.home_name))
+    return HTMLResponse(html, status_code=status)
 
 
 def install(app: FastAPI) -> None:
@@ -96,11 +100,11 @@ _PAGE = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="MCT">
+<meta name="apple-mobile-web-app-title" content="{home_name}">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<title>Log in · MYCAREERTRACKER</title>
+<title>Log in · {app_name}</title>
 <style>
   :root { color-scheme: light dark; --bg: #f6f7f9; --card: #fff; --text: #111318; --muted: #5d6472; --border: #dfe2e8; --accent: #4f6bff; --danger: #d23c3c; }
   @media (prefers-color-scheme: dark) { :root { --bg: #0d0f13; --card: #15181e; --text: #e8eaef; --muted: #9aa1ae; --border: #262a33; --danger: #ff6b6b; } }
@@ -123,7 +127,7 @@ _PAGE = """<!doctype html>
 </head>
 <body>
 <form method="post" action="/login">
-  <div class="mark">MCT</div>
+  <div class="mark">{mark}</div>
   <h1>Welcome back</h1>
   <p>Enter the password to open your tracker.</p>
   <input type="text" name="username" value="mct" autocomplete="username" hidden>

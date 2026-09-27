@@ -10,6 +10,7 @@ import LinkedInDrawer from "../components/LinkedInDrawer";
 import AddToProfile from "../components/AddToProfile";
 import { TellCheck } from "../components/TellCheck";
 import ProfileEditor from "../components/ProfileEditor";
+import CvSheet from "../components/CvSheet";
 import { label, usePack } from "../lib/pack";
 
 const PROF_TONE: Record<string, "success" | "accent" | "warn" | "neutral"> = { expert: "success", hands_on: "success", familiar: "warn", learning: "neutral" };
@@ -21,6 +22,7 @@ export default function ProfilePage() {
   const [role, setRole] = useState("Cloud Data Engineer (AWS)");
   useEffect(() => { setRole(q.data?.target.primary_role ?? pack.default_role); }, [pack.default_role, q.data?.target.primary_role]);
   const [editing, setEditing] = useState(false);
+  const [cv, setCv] = useState(false);
   const [openSkill, setOpenSkill] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [json, setJson] = useState<string | null>(null);
@@ -53,8 +55,9 @@ export default function ProfilePage() {
   return (
     <div>
       <PageHeader title="Profile" subtitle={`Updated ${p.updated_at} · ${p.hands_on} ${pack.proficiency_labels.hands_on.toLowerCase()} · ${p.learning} ${pack.proficiency_labels.learning.toLowerCase()} · ${p.years} yrs`}
-        actions={<div className="flex gap-2"><Button variant="primary" onClick={() => setAdding(true)}><Plus className="size-4" /> Add to profile</Button><a href="/api/resume.pdf" download><Button variant="secondary"><Download className="size-4" /> Resume PDF</Button></a><Button variant="secondary" onClick={() => setLinkedin(true)}><Link2 className="size-4" /> LinkedIn text</Button>{pack.features.edit_json ? <Button variant="secondary" onClick={() => setJson(json === null ? JSON.stringify(p, null, 2) : null)}>{json === null ? "Edit as JSON" : "Close editor"}</Button> : <Button variant="secondary" onClick={() => setEditing(true)}><Pencil className="size-4" /> Edit profile</Button>}</div>} />
+        actions={<div className="flex flex-wrap gap-2"><Button variant="primary" onClick={() => setAdding(true)}><Plus className="size-4" /> Add to profile</Button>{pack.key === "ot" ? <Button variant="secondary" onClick={() => setCv(true)}><Download className="size-4" /> Download CV</Button> : <a href="/api/resume.pdf" download><Button variant="secondary"><Download className="size-4" /> Resume PDF</Button></a>}<Button variant="secondary" onClick={() => setLinkedin(true)}><Link2 className="size-4" /> LinkedIn text</Button>{pack.features.edit_json ? <Button variant="secondary" onClick={() => setJson(json === null ? JSON.stringify(p, null, 2) : null)}>{json === null ? "Edit as JSON" : "Close editor"}</Button> : <Button variant="secondary" onClick={() => setEditing(true)}><Pencil className="size-4" /> Edit profile</Button>}</div>} />
       {!pack.features.edit_json && <ProfileEditor open={editing} onClose={() => setEditing(false)} profile={p} />}
+      {pack.key === "ot" && <CvSheet open={cv} onClose={() => setCv(false)} />}
       <LinkedInDrawer open={linkedin} onClose={() => setLinkedin(false)} />
       <AddToProfile open={adding} onClose={() => setAdding(false)} />
       <details className="mb-4"><summary className="text-[13px] text-muted cursor-pointer hover:text-text">Rebuild from a resume</summary><div className="mt-3">{Builder}</div></details>

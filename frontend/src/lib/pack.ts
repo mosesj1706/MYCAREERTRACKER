@@ -6,6 +6,7 @@ export interface Pack {
   key: "tech" | "ot";
   app_name: string;
   mark: string;
+  home_name: string;
   default_role: string;
   categories: Record<string, string>;
   proficiency_labels: Record<"learning" | "familiar" | "hands_on" | "expert", string>;
@@ -18,7 +19,7 @@ export interface Pack {
 
 // Until /api/pack answers, render as the tech pack did before packs existed (no layout jump for Moses).
 const FALLBACK: Pack = {
-  key: "tech", app_name: "MYCAREERTRACKER", mark: "MCT", default_role: "Cloud Data Engineer (AWS)", categories: {},
+  key: "tech", app_name: "MYCAREERTRACKER", mark: "MCT", home_name: "MCT", default_role: "Cloud Data Engineer (AWS)", categories: {},
   proficiency_labels: { learning: "Learning", familiar: "Familiar", hands_on: "Hands-on", expert: "Expert" },
   mcq_topics: ["AWS", "SQL", "Python", "Apache Airflow"], interview_modes: [],
   features: { github: true, edit_json: true, countries: false, documents: false, cpd: false, cover_letters: false },
@@ -35,3 +36,6 @@ export const label = (p: Pack, key: string, fallback: string) => p.labels[key] ?
 
 /** 🇦🇪 from "AE". */
 export const flag = (code: string) => String.fromCodePoint(...[...code.toUpperCase()].map((c) => 127397 + c.charCodeAt(0)));
+
+/** "Portfolio project" -> "portfolio project", but "CPD focus project" keeps its acronym. */
+export const lcFirst = (s: string) => (s.length > 1 && s[1] === s[1].toUpperCase() && /[A-Z]/.test(s[1]) ? s : s.charAt(0).toLowerCase() + s.slice(1));

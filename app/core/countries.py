@@ -62,6 +62,16 @@ def country(code: str | None) -> dict | None:
     return next((c for c in all_countries() if c["code"] == code), None)
 
 
+def cv_format(code: str | None) -> dict:
+    """CV conventions for a country: photo (expected / optional / avoid), which personal details
+    belong on it, paper size, 'CV' or 'Resume', length, references line. The international standard
+    (no photo, no personal details, A4) when no country is given."""
+    standard = _raw()["cv_standard"]
+    c = country(code)
+    return {**standard, **((c or {}).get("cv_format") or {}), "code": c["code"] if c else None,
+            "country": c["name"] if c else "International", "region": c["region"] if c else None}
+
+
 def route(route_id: str) -> tuple[dict, dict]:
     """(country, route) for a route id, or KeyError."""
     for c in all_countries():

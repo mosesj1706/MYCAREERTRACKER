@@ -7,7 +7,7 @@ import { CheckCircle2, Circle, ExternalLink, FolderTree, Hammer, RefreshCw, Sear
 import { api, type LearningPlan, type Profile, type Resource, type SkillPlan } from "../lib/api";
 import { Badge, Button, Card, Empty, Input, PageHeader, Progress, Select, Skeleton } from "../components/ui";
 import { useToast } from "../components/Toast";
-import { label, usePack } from "../lib/pack";
+import { label, lcFirst, usePack } from "../lib/pack";
 
 export default function Learning() {
   const qc = useQueryClient(); const toast = useToast();
@@ -33,7 +33,7 @@ export default function Learning() {
         <label className="text-[13px]"><div className="text-muted mb-1">Hours / week</div><Select value={weekly} onChange={(e) => setWeekly(Number(e.target.value))}>{[5, 8, 10, 15, 20].map((h) => <option key={h} value={h}>{h}</option>)}</Select></label>
         <label className="text-[13px]"><div className="text-muted mb-1">Gap skills to include</div><Select value={topN} onChange={(e) => setTopN(Number(e.target.value))}>{[3, 4, 5, 6, 8].map((h) => <option key={h} value={h}>{h}</option>)}</Select></label>
         <Button variant="primary" loading={gen.isPending} onClick={() => gen.mutate()}><Sparkles className="size-4" /> {gen.isPending ? "Designing (1–2 min)…" : p ? "Regenerate plan" : "Generate plan"}</Button>
-        <div className="text-[12.5px] text-muted">Built from your gap analysis: one {label(pack, "portfolio_project", "portfolio project").toLowerCase()} that closes several gaps, decomposed into per-skill steps, scoped to ≤12 weeks.</div>
+        <div className="text-[12.5px] text-muted">Built from your gap analysis: one {lcFirst(label(pack, "portfolio_project", "portfolio project"))} that closes several gaps, decomposed into per-skill steps, scoped to ≤12 weeks.</div>
       </div>
     </Card>
   );

@@ -2,45 +2,64 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Apple-style tokens: iOS/iPadOS system colours and grouped backgrounds. Light is
+ * systemGroupedBackground (#F2F2F7) with white cards; dark is black with #1C1C1E cards.
+ * The html element gets .dark from the saved choice or, by default, the device setting.
+ */
 :root {
-  --bg: #f5f6fa;
+  --bg: #f2f2f7;
   --surface: #ffffff;
-  --surface-2: #f0f2f7;
-  --border: #e3e6ee;
-  --border-strong: #cdd2de;
-  --text: #0e1120;
-  --muted: #5d6578;
-  --faint: #9098ab;
-  --accent: #4f6bff;
-  --accent-soft: #e8ecff;
-  --success: #16a34a;
-  --success-soft: #e4f7ea;
-  --warn: #d97706;
-  --warn-soft: #fdf1dc;
-  --danger: #dc2626;
-  --danger-soft: #fde8e8;
-  --ring: rgba(79, 107, 255, 0.35);
-  --shadow: 0 1px 2px rgba(16, 20, 40, 0.06), 0 8px 24px -12px rgba(16, 20, 40, 0.12);
+  --surface-2: #f2f2f7;
+  --border: #e5e5ea;
+  --border-strong: #d1d1d6;
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --faint: #8e8e93;
+  --accent: #007aff;
+  --accent-soft: #e5f0ff;
+  --success: #248a3d;
+  --success-soft: #e3f5e8;
+  --warn: #b25000;
+  --warn-soft: #fff1dc;
+  --danger: #d70015;
+  --danger-soft: #ffe8e6;
+  --fill: rgba(118, 118, 128, 0.12);
+  --fill-2: rgba(118, 118, 128, 0.08);
+  --material: rgba(246, 246, 248, 0.82);
+  --hud: rgba(255, 255, 255, 0.86);
+  --ring: rgba(0, 122, 255, 0.32);
+  --switch-on: #34c759;
+  --shadow: 0 1px 1px rgba(0, 0, 0, 0.02), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
+  color-scheme: light;
 }
 .dark {
-  --bg: #0a0c12;
-  --surface: #11141c;
-  --surface-2: #171b25;
-  --border: #232837;
-  --border-strong: #303748;
-  --text: #e8eaf1;
-  --muted: #98a0b3;
-  --faint: #626a7d;
-  --accent: #7b8fff;
-  --accent-soft: #1c2140;
-  --success: #34d399;
-  --success-soft: #0f2a21;
-  --warn: #fbbf24;
-  --warn-soft: #2e2410;
-  --danger: #f87171;
-  --danger-soft: #331717;
-  --ring: rgba(123, 143, 255, 0.4);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -16px rgba(0, 0, 0, 0.6);
+  --bg: #000000;
+  --surface: #1c1c1e;
+  --surface-2: #2c2c2e;
+  --border: #38383a;
+  --border-strong: #48484a;
+  --text: #f5f5f7;
+  --muted: #98989d;
+  --faint: #6c6c70;
+  --accent: #0a84ff;
+  --accent-soft: #0a2a4d;
+  --success: #30d158;
+  --success-soft: #0c2e17;
+  --warn: #ff9f0a;
+  --warn-soft: #36250a;
+  --danger: #ff453a;
+  --danger-soft: #3b1411;
+  --fill: rgba(118, 118, 128, 0.24);
+  --fill-2: rgba(118, 118, 128, 0.16);
+  --material: rgba(28, 28, 30, 0.78);
+  --hud: rgba(44, 44, 46, 0.86);
+  --ring: rgba(10, 132, 255, 0.4);
+  --switch-on: #30d158;
+  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.02);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -60,8 +79,12 @@
   --color-warn-soft: var(--warn-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-fill: var(--fill);
+  --color-fill-2: var(--fill-2);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Inter", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", system-ui, sans-serif;
+  --font-rounded: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
   --shadow-card: var(--shadow);
 }
 
@@ -70,30 +93,48 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+  font-size: 15px;
+  letter-spacing: -0.006em;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
 }
-* { border-color: var(--border); }
-::selection { background: var(--accent); color: white; }
+/* Default border colour in the base layer, so utilities like border-accent or border-danger/40 win */
+@layer base { *, ::before, ::after { border-color: var(--border); } }
+::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+button, a, [role="button"] { touch-action: manipulation; }
+h1, h2, h3 { font-family: var(--font-display); }
 
-/* Scrollbars */
+/* Scrollbars: thin overlay-style, as on macOS */
 * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
 
-/* Focus */
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+:focus-visible { outline: 3px solid var(--ring); outline-offset: 1px; border-radius: 8px; }
 
-/* Utilities */
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
-.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+@layer components {
+  /* Inset-grouped card: no border in light mode, the grouped background does the separating.
+     In a layer so utilities such as border-danger/40 can still colour a card's edge. */
+  .card { background: var(--surface); border: 1px solid transparent; border-radius: 16px; box-shadow: var(--shadow); }
+  .dark .card { border-color: rgba(255, 255, 255, 0.04); }
+  /* Translucent material for the sidebar and floating HUDs */
+  .material { background: var(--material); backdrop-filter: saturate(180%) blur(24px); -webkit-backdrop-filter: saturate(180%) blur(24px); }
+}
+
+/* Numbers: SF with tabular figures (Apple does not set numbers in a monospace face) */
+.num { font-family: var(--font-sans); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.rounded-num { font-family: var(--font-rounded); font-variant-numeric: tabular-nums; }
+
 .prose-chat p { margin: 0 0 0.6em; }
 .prose-chat p:last-child { margin-bottom: 0; }
 .prose-chat strong { color: var(--text); font-weight: 600; }
 .prose-chat hr { border: 0; border-top: 1px solid var(--border); margin: 0.75em 0; }
 .prose-chat ul, .prose-chat ol { padding-left: 1.2em; margin: 0.3em 0 0.6em; }
-.prose-chat code { font-family: var(--font-mono); font-size: 0.85em; background: var(--surface-2); padding: 0.1em 0.35em; border-radius: 4px; }
-.prose-chat pre { background: var(--surface-2); padding: 0.75em; border-radius: 8px; overflow: auto; }
+.prose-chat code { font-family: var(--font-mono); font-size: 0.85em; background: var(--fill); padding: 0.1em 0.35em; border-radius: 5px; }
+.prose-chat pre { background: var(--fill-2); padding: 0.75em; border-radius: 10px; overflow: auto; }
+.prose-chat h2 { font-size: 1.02em; font-weight: 600; margin: 0.9em 0 0.35em; }
 
 @keyframes shimmer { 0% { background-position: -400px 0 } 100% { background-position: 400px 0 } }
-.skeleton { background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%); background-size: 800px 100%; animation: shimmer 1.4s infinite linear; border-radius: 8px; }
+.skeleton { background: linear-gradient(90deg, var(--fill-2) 25%, var(--fill) 50%, var(--fill-2) 75%); background-size: 800px 100%; animation: shimmer 1.4s infinite linear; border-radius: 12px; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }

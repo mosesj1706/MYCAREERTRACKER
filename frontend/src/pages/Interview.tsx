@@ -6,7 +6,7 @@ import { clsx } from "clsx";
 import { Bot, Send, Square, Save, Trash2, User, BrainCircuit, History, CheckCircle2, XCircle, Mic, MicOff, Volume2, VolumeX, Timer, BookOpen, Info } from "lucide-react";
 import { api, streamSSE, type Application, type CaseStudy, type CountriesPayload, type Gap, type InterviewRecord, type MCQ, type Profile } from "../lib/api";
 import { flag, label, usePack } from "../lib/pack";
-import { Badge, Button, Card, CardHeader, Empty, PageHeader, Segmented, Select, Skeleton, Progress } from "../components/ui";
+import { Badge, Button, Card, CardHeader, Empty, PageHeader, Segmented, Select, Skeleton, Progress, SwitchRow } from "../components/ui";
 import { useToast } from "../components/Toast";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -69,6 +69,7 @@ function Mock({ init }: { init?: NavState }) {
   const [ended, setEnded] = useState(false);
   const [listening, setListening] = useState(false);
   const rec = useRef<Recognition | null>(null);
+  const live = useRef<string | null>(null);  // the session whose reply is streaming; discard/save clear it so late text is dropped
   const bottom = useRef<HTMLDivElement>(null);
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [msgs, streaming]);
 
@@ -80,10 +81,15 @@ function Mock({ init }: { init?: NavState }) {
     setStreaming(true);
     let reply = "";
     try {
-      await streamSSE(`/api/interview/${id}/message`, { text }, (chunk) => { reply += chunk; setMsgs((m) => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], content: c[c.length - 1].content + chunk }; return c; }); });
+      live.current = id;
+      await streamSSE(`/api/interview/${id}/message`, { text }, (chunk) => {
+        if (live.current !== id) return;  // session discarded or saved mid-reply
+        reply += chunk;
+        setMsgs((m) => { if (!m.length) return m; const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], content: c[c.length - 1].content + chunk }; return c; });
+      });
     } catch (e) { toast("error", (e as Error).message); }
     setStreaming(false);
-    if (voice && reply) speak(reply);
+    if (voice && reply && live.current === id) speak(reply);
     if (text?.trim().toLowerCase() === "end") setEnded(true);
   };
   const start = async () => {
@@ -105,8 +111,8 @@ function Mock({ init }: { init?: NavState }) {
     r.onend = () => setListening(false);
     rec.current = r; r.start(); setListening(true);
   };
-  const save = useMutation({ mutationFn: () => api.post(`/api/interview/${sid}/save`), onSuccess: () => { setSid(null); setMsgs([]); qc.invalidateQueries({ queryKey: ["interviews"] }); qc.invalidateQueries({ queryKey: ["analytics"] }); toast("success", "Session saved."); } });
-  const discard = async () => { if (sid) await api.del(`/api/interview/${sid}`); if ("speechSynthesis" in window) window.speechSynthesis.cancel(); setSid(null); setMsgs([]); };
+  const save = useMutation({ mutationFn: () => api.post(`/api/interview/${sid}/save`), onSuccess: () => { live.current = null; setSid(null); setMsgs([]); qc.invalidateQueries({ queryKey: ["interviews"] }); qc.invalidateQueries({ queryKey: ["analytics"] }); toast("success", "Session saved."); } });
+  const discard = async () => { live.current = null; if ("speechSynthesis" in window) window.speechSynthesis.cancel(); const id = sid; setSid(null); setMsgs([]); setStreaming(false); if (id) await api.del(`/api/interview/${id}`); };
   const selectedCountries = ctry.data?.countries.filter((c) => ctry.data!.selection.selected.includes(c.code)) ?? [];
   const modeLabel = modes.find((m) => m.value === mode)?.label.split(" — ")[0] ?? mode;
 
@@ -146,10 +152,11 @@ function Mock({ init }: { init?: NavState }) {
           )}
         </div>
         {ot && (
-          <label className="mt-4 flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 cursor-pointer">
-            <input type="checkbox" className="size-4 accent-[var(--accent)]" checked={voice} onChange={() => setVoice(!voice)} />
-            <Volume2 className="size-4 text-accent" /><span className="text-[13px]"><b>Voice practice.</b> The panel's questions are read aloud; answer with the microphone button (or the iPad keyboard's dictation).</span>
-          </label>
+          <div className="mt-4 rounded-[12px] bg-fill-2 px-4 py-1.5">
+            <SwitchRow checked={voice} onChange={setVoice} hint="The panel's questions are read aloud; answer with the microphone button or the iPad keyboard's dictation.">
+              <span className="inline-flex items-center gap-2 font-medium"><Volume2 className="size-4 text-accent" /> Voice practice</span>
+            </SwitchRow>
+          </div>
         )}
         <ul className="text-[13px] text-muted mt-4 space-y-1 list-disc pl-5">
           <li>One question at a time. Every answer gets a <b className="text-text">grade, a critique, and the pro answer</b> built from your real background.</li>

@@ -5,7 +5,7 @@ import { clsx } from "clsx";
 import { Download, FileText, Mail, Save, Trash2, Wand2 } from "lucide-react";
 import { api, type Application, type CountriesPayload, type CoverLetter } from "../lib/api";
 import { flag } from "../lib/pack";
-import { Badge, Button, Card, Empty, Input, PageHeader, Segmented, Select, Textarea } from "../components/ui";
+import { Badge, Button, Card, Empty, Input, PageHeader, Segmented, Select, SwitchRow, Textarea } from "../components/ui";
 import { CopyButton } from "../components/Copy";
 import { TellCheck } from "../components/TellCheck";
 import { useToast } from "../components/Toast";
@@ -76,9 +76,9 @@ export default function CoverLetters() {
             <div className="text-[13px] text-muted">Tone<div className="mt-1"><Segmented value={tone} onChange={setTone} options={[{ value: "formal", label: "Formal" }, { value: "warm", label: "Warm" }]} /></div></div>
           </div>
           <label className="block text-[13px] text-muted">Address it to (optional)<Input value={addressee} onChange={(e) => setAddressee(e.target.value)} placeholder="e.g. Dr Ayesha Rahman, or the agency's name" className="mt-1" /></label>
-          <div className="space-y-2 text-[13px]">
-            {([["include_licence", "Mention my licence status (only what my progress shows)"], ["include_notice", "Mention my notice period"], ["include_visa", "Mention my visa status"]] as const).map(([k, l]) => (
-              <label key={k} className="flex items-center gap-2.5 cursor-pointer"><input type="checkbox" className="size-4 accent-[var(--accent)]" checked={inc[k]} onChange={() => setInc({ ...inc, [k]: !inc[k] })} />{l}</label>
+          <div className="rounded-[12px] bg-fill-2 px-4 py-1 divide-y divide-border">
+            {([["include_licence", "Licence status", "Only what your progress shows"], ["include_notice", "Notice period", undefined], ["include_visa", "Visa status", undefined]] as const).map(([k, l, h]) => (
+              <SwitchRow key={k} checked={inc[k]} onChange={(v) => setInc({ ...inc, [k]: v })} hint={h}>{l}</SwitchRow>
             ))}
           </div>
           <label className="block text-[13px] text-muted">Anything else to mention (optional)<Textarea rows={2} value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="e.g. I speak Malayalam and Hindi; available from December" className="mt-1" /></label>

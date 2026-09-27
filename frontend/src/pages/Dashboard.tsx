@@ -36,7 +36,7 @@ export default function Dashboard() {
         subtitle={p ? <>Targeting <span className="text-text font-medium">{p.target.primary_role}</span> · {p.hands_on} {pack.proficiency_labels.hands_on.toLowerCase()} skills · {p.years} yrs {ot ? "post-qualification" : "experience"}</> : undefined}
         actions={<Link to="/tailor"><Button variant="primary"><Target className="size-4" /> Analyze a job</Button></Link>} />
 
-      <motion.div {...fade} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <motion.div {...fade} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {k ? <>
           <Stat label="JDs tracked" value={k.tracked} icon={<Briefcase className="size-5" />} hint={`${k.applied} applied`} />
           <Stat label="Response rate" value={k.response_rate == null ? "—" : `${k.response_rate}%`} icon={<Reply className="size-5" />} hint="reached screening+" tone={k.response_rate != null && k.response_rate >= 30 ? "success" : undefined} />
@@ -75,14 +75,13 @@ export default function Dashboard() {
         <motion.div {...fade} transition={{ delay: 0.1 }}>
           <Card className="h-full">
             <CardHeader title="Best current match" subtitle={best ? `${best.title}${best.company ? " @ " + best.company : ""}` : "No applications yet"} />
-            <div className="px-5 pb-5 flex items-center gap-5">
+            <div className="px-5 pb-5">
               {best ? <>
-                <Gauge value={best.match_score} size={112} label="fit" />
-                <div className="text-[13px] space-y-1.5 min-w-0">
-                  <div><Badge tone="accent">{best.status}</Badge></div>
-                  <div className="text-muted">Gaps: <span className="text-text">{best.match.top_gaps.slice(0, 3).join(", ")}</span></div>
-                  <Link to="/applications" className="text-accent hover:underline inline-block">Open pipeline →</Link>
+                <div className="flex items-center gap-4">
+                  <Gauge value={best.match_score} size={96} stroke={10} label="fit" />
+                  <div className="space-y-2 min-w-0"><Badge tone="accent">{best.status}</Badge><div><Link to="/applications" className="text-[14px] text-accent hover:underline">Open pipeline →</Link></div></div>
                 </div>
+                <div className="text-[13px] text-muted mt-3 leading-relaxed">Close first: <span className="text-text">{best.match.top_gaps.slice(0, 3).join(" · ")}</span></div>
               </> : <div className="text-sm text-muted">Paste a job description on the <Link className="text-accent" to="/tailor">Analyze</Link> page.</div>}
             </div>
           </Card>

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, UploadFile
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -78,12 +78,6 @@ def _app_dict(a: tracker.Application) -> dict:
 def get_pack():
     """Labels, categories and features of the active profession pack; the UI adapts to it."""
     return pack.public()
-
-
-def _photo_for(code: str | None) -> bool:
-    """CV photo only where the country pack's region expects one (the Gulf)."""
-    c = countries.country(code) if pack.PACK.key == "ot" else None
-    return bool(c and c.get("region") == "gulf")
 
 
 # ----------------------------------------------------------------------------- profile
@@ -166,24 +160,35 @@ def _pdf_response(pdf: bytes, filename: str) -> Response:
     return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
+def _cv_name(p: Profile, country: str | None, suffix: str = "") -> str:
+    """Tech: Name_Resume.pdf as before. OT: Name_CV_AE.pdf or Name_Resume_US.pdf, per the country's convention."""
+    base = p.personal_info.name.replace(" ", "_")
+    if pack.PACK.key != "ot":
+        return f"{base}_Resume{suffix}.pdf"
+    fmt = countries.cv_format(country)
+    return f"{base}_{'Resume' if fmt['document'] == 'Resume' else 'CV'}_{fmt['code'] or 'International'}{suffix}.pdf"
+
+
 @app.get("/api/resume.pdf")
-def resume_pdf():
-    """Master resume, generated from the profile."""
+def resume_pdf(country: str | None = None, photo: bool | None = None):
+    """Master resume, generated from the profile. OT: laid out to `country`'s conventions (default: her
+    primary country); `photo` overrides that country's photo convention."""
     p = _profile()
-    photo = _photo_for(countries.selection()["primary"]) if pack.PACK.key == "ot" else False
-    return _pdf_response(resume.build_pdf(p, include_photo=photo), f"{p.personal_info.name.replace(' ', '_')}_Resume.pdf")
+    if pack.PACK.key == "ot" and country is None:
+        country = countries.selection()["primary"]
+    return _pdf_response(resume.build_pdf(p, country=country or None, photo=photo), _cv_name(p, country))
 
 
 @app.get("/api/applications/{app_id}/resume.pdf")
-def application_resume_pdf(app_id: int):
-    """Resume tailored to one tracked application (needs its tailored output)."""
+def application_resume_pdf(app_id: int, photo: bool | None = None):
+    """Resume tailored to one tracked application (needs its tailored output); OT: in the job country's format."""
     a = _application(app_id)
     if a.tailored is None:
         raise HTTPException(400, "This application has no tailored output yet - run Tailor first.")
     p = _profile()
     slug = "".join(ch if ch.isalnum() else "_" for ch in (a.company or a.title))[:40]
-    return _pdf_response(resume.build_pdf(p, a.tailored, a.title, include_photo=_photo_for(a.country)),
-                         f"{p.personal_info.name.replace(' ', '_')}_Resume_{slug}.pdf")
+    return _pdf_response(resume.build_pdf(p, a.tailored, a.title, country=a.country, photo=photo),
+                         _cv_name(p, a.country, f"_{slug}") if pack.PACK.key == "ot" else f"{p.personal_info.name.replace(' ', '_')}_Resume_{slug}.pdf")
 
 
 # ----------------------------------------------------------------------------- AI-tell check
@@ -675,6 +680,33 @@ def get_analytics():
 
 
 # ----------------------------------------------------------------------------- frontend
+def _index() -> Response:
+    """index.html with the pack's name in the title and home-screen meta, so it never shows another app's name."""
+    html = (STATIC / "index.html").read_text()
+    if pack.PACK.key != "tech":
+        html = (html.replace("<title>MYCAREERTRACKER</title>", f"<title>{pack.PACK.app_name}</title>")
+                    .replace('name="apple-mobile-web-app-title" content="MCT"', f'name="apple-mobile-web-app-title" content="{pack.PACK.home_name}"'))
+    return HTMLResponse(html)
+
+
+if STATIC.exists() and pack.PACK.key != "tech":
+    # Her own home-screen name and icon (the files in frontend/public are the tech version's).
+    @app.get("/manifest.webmanifest", include_in_schema=False)
+    def manifest():
+        return JSONResponse({"name": pack.PACK.app_name, "short_name": pack.PACK.home_name, "start_url": "/", "display": "standalone",
+                             "background_color": "#f2f2f7", "theme_color": "#f2f2f7",
+                             "icons": [{"src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png"},
+                                       {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}]},
+                            media_type="application/manifest+json")
+
+    @app.get("/apple-touch-icon.png", include_in_schema=False)
+    def touch_icon():
+        return FileResponse(STATIC / f"apple-touch-icon-{pack.PACK.key}.png")
+
+    @app.get("/icon-512.png", include_in_schema=False)
+    def icon_512():
+        return FileResponse(STATIC / f"icon-512-{pack.PACK.key}.png")
+
 if STATIC.exists():
     app.mount("/assets", StaticFiles(directory=STATIC / "assets"), name="assets")
 
@@ -682,6 +714,6 @@ if STATIC.exists():
     def spa(path: str):
         target = (STATIC / path).resolve()
         # resolve + containment check: a "../" path must never reach .env or the data directory
-        if path and target.is_file() and target.is_relative_to(STATIC.resolve()):
+        if path and target.is_file() and target.is_relative_to(STATIC.resolve()) and target.name != "index.html":
             return FileResponse(target)
-        return FileResponse(STATIC / "index.html")
+        return _index()
