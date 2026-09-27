@@ -37,9 +37,18 @@ sudo nano /opt/mct/.env
 `.env` on the server:
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...     # a key from her own Claude Console workspace, which has a monthly spend limit
-MCT_PASSWORD=...                 # long; changing it later logs every device out
+ANTHROPIC_API_KEY=sk-ant-...        # a key from her own Claude Console workspace, which has a monthly spend limit
+MCT_LOGIN_EMAIL=her@example.com     # she logs in with this email...
+MCT_PASSWORD_HASH=scrypt$...        # ...and a password (make the hash on the Mac: python -m app.auth hash-password)
+# ...or a 6-digit code emailed to her. Any SMTP account works; with Gmail use an app password.
+MCT_SMTP_HOST=smtp.gmail.com
+MCT_SMTP_PORT=587
+MCT_SMTP_USER=sender@gmail.com
+MCT_SMTP_PASSWORD=app-password
+MCT_SMTP_FROM=MED Career Tracker <sender@gmail.com>
 ```
+
+Password and codes can be used together; she picks on the login page. Changing the email or password logs every device out.
 
 Then, still on the server:
 
@@ -48,7 +57,7 @@ sudo /opt/mct/deploy/setup.sh tracker.example.com
 ```
 
 ## 4. On the iPad
-Open `https://tracker.example.com` in Safari, log in (Safari offers to save the password), then **Share → Add to Home Screen**. It opens full screen like an app, and stays logged in for 30 days.
+Open `https://tracker.example.com` in Safari and log in with her email and password (Safari offers to save it) or an emailed code (Safari offers to fill it from Mail), then **Share → Add to Home Screen**. It opens full screen like an app, and stays logged in for 30 days.
 
 ## Updating
 `deploy/push.sh ubuntu@<static-ip>` builds, copies, installs any new requirements and restarts. Data and `.env` on the server are never touched.
@@ -59,6 +68,6 @@ Open `https://tracker.example.com` in Safari, log in (Safari offers to save the 
 - Restore: create a new instance from a snapshot in the Lightsail console, then move the static IP to it.
 
 ## Notes
-- Ten wrong passwords lock the login for 15 minutes.
+- Ten wrong passwords lock the login for 15 minutes. Codes expire after 10 minutes, allow 5 tries, and at most one a minute (five an hour) is sent.
 - The local AI-text detector (torch) is not installed on the server; the deterministic check still runs.
 - Cost: $7/month for the instance, a few cents for snapshots, plus API usage (capped by the workspace spend limit).
