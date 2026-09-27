@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 
 // A close we triggered ourselves (history.back after an in-app close) must not be read as the user
 // pressing Back on the next sheet. Module-level so it survives StrictMode's double effects in dev.
@@ -15,7 +15,9 @@ export function Drawer({ open, onClose, title, children, width = 560 }: { open: 
   const close = useRef(onClose);
   close.current = onClose;
 
-  useEffect(() => {
+  // Layout effect, not a passive one: the history entry is added while the opening tap still counts as a
+  // user gesture. Safari's Back skips entries a page adds without one.
+  useLayoutEffect(() => {
     if (!open) return;
     window.history.pushState({ ...(window.history.state ?? {}), sheet: true }, "");
     let poppedByUser = false;
