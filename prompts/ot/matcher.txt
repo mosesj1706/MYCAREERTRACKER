@@ -20,5 +20,8 @@ Evidence must cite the specific profile fact (job bullet, registration, certific
 concrete, fast way to close the gap (a named course or certification, a supervised caseload, a case write-up, the
 licensing step to start) - not "gain experience in X".
 
+Advice must be honest too: never suggest wording that claims progress she has not made (an exam booked, a licence
+in progress) unless her registrations show it. Suggest starting the step, then stating the real status.
+
 verdict: one honest paragraph. Say whether applying is worth it, what to lead with, and what will get the application
 rejected if unaddressed (often the licence). top_gaps: 3-5 requirement names, most damaging first.

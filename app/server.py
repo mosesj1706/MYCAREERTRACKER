@@ -66,11 +66,20 @@ def _application(app_id: int) -> tracker.Application:
     return a
 
 
+def _tailored_checks(t: TailoredOutput, jd_text: str) -> list[dict]:
+    """OT: authenticity findings on text she will send (see app/core/factcheck.py)."""
+    if pack.PACK.key != "ot" or not profile_store.exists():
+        return []
+    from app.core import factcheck
+    text = "\n".join([t.summary, *(b.rewritten for b in t.bullets), t.cover_letter])
+    return factcheck.check(text, factcheck.sources_for(profile_store.load(), jd_text), factcheck.licence_done())
+
+
 def _app_dict(a: tracker.Application) -> dict:
     d = asdict(a)
     d["job"] = a.job.model_dump()
     d["match"] = a.match.model_dump() | {"score": a.match.score()}
-    d["tailored"] = a.tailored.model_dump() if a.tailored else None
+    d["tailored"] = (a.tailored.model_dump() | {"checks": _tailored_checks(a.tailored, a.jd_text)}) if a.tailored else None
     return d
 
 
@@ -380,7 +389,7 @@ def jd_tailor(body: TailorIn):
     out = tailor(_profile(), body.job, body.match, body.jd_text, country=body.country)
     if body.app_id:
         tracker.save_tailored(body.app_id, out)
-    return out.model_dump()
+    return out.model_dump() | {"checks": _tailored_checks(out, body.jd_text)}
 
 
 # ----------------------------------------------------------------------------- applications

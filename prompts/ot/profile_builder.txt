@@ -17,6 +17,13 @@ Rules:
   - "hands_on" = practised independently in a paid clinical job, supported by a bullet or duty.
   - "expert" = advanced: specialist certification plus repeated independent practice, or supervising/teaching others in it.
   Internship and academic-posting evidence counts less than job evidence: something done only during internship is "familiar".
+  A skill only named in a skills or keywords list, with no duty or bullet that shows it being done, is "familiar" at most,
+  and its evidence says so ("named in the core-skills list only").
+- Evidence must show that exact skill. Do not borrow a nearby bullet: a home exercise programme bullet does not show
+  home modification or home-based practice; treating ICU patients does not show wheelchair seating.
+- Practice settings are only those the CV says she works in (inpatient, outpatient, ICU...). Do not infer a setting
+  from where a programme is carried out.
+- Never add a skill just because a category would otherwise be empty.
 - Evidence entries are short paraphrases of the bullet that proves the skill, naming where it was done (job or internship).
 - experience.technologies holds the assessments, equipment and techniques named for that job.
 - Internship: record the compulsory internship as an experience entry with employment_type "internship" when the resume
@@ -27,7 +34,8 @@ Rules:
 - personal_info: nationality, date of birth, visa status and notice period only if the resume states them.
 - Write the summary for the target role, using only facts from the resume: clinical areas, client groups, settings,
   years of post-qualification experience.
-- Dates: convert "Nov 2022" to "2022-11".
+- Dates: convert "Nov 2022" to "2022-11". If the resume gives only a year, write only the year ("2023"): never invent a
+  month. A job cannot start before the internship ended; if the dates overlap, keep them as written and add a risk flag.
 - risk_flags: what a hiring panel or a licensing regulator would question. Look for: post-qualification experience
   below 2 years once the internship is excluded (today is {today}); employers without a name or dates (these cannot be
   verified by a regulator's primary source verification); no registration or licence number; no outcome numbers

@@ -7,6 +7,7 @@ import { api, type JobAnalysis, type MatchResult, type RequirementMatch, type Ta
 import { Badge, Button, Card, CardHeader, Gauge, Input, PageHeader, Textarea } from "../components/ui";
 import { CopyBlock } from "../components/Copy";
 import { useToast } from "../components/Toast";
+import { Checks } from "../components/Checks";
 import { download, scoreTone, usePersistedState } from "../lib/util";
 import { flag, usePack } from "../lib/pack";
 
@@ -170,6 +171,7 @@ function TailoredView({ t, job, score }: { t: TailoredOutput; job: JobAnalysis; 
         <h3 className="font-semibold">Tailored for this job</h3>
         <Button size="sm" onClick={() => download("tailored_application.md", md)}><Download className="size-4" /> Download .md</Button>
       </div>
+      <Checks checks={t.checks} />
       <Card className="p-5 border-danger/30">
         <div className="flex items-center gap-2 font-semibold text-danger"><ShieldAlert className="size-4" /> Do not claim these</div>
         <p className="text-[12.5px] text-muted mt-0.5">Read this first. The JD asks for them; your profile doesn't support them. Each has a truthful alternative.</p>

@@ -201,6 +201,10 @@ def norms_block(code: str | None) -> str:
         doing = [st["title"] for st in r["steps"] if p.get(st["id"], {}).get("status") == "in_progress"]
         lines.append(f"Licence route {r['regulator']} ({r.get('area', '')}): exam {r.get('exam_name', 'n/a')} via {r.get('exam_provider', 'n/a')}. "
                      f"Candidate's progress - done: {', '.join(done) or 'nothing yet'}; in progress: {', '.join(doing) or 'nothing'}.")
+        checked = last_check(rid)
+        if checked and checked.get("summary"):
+            # Figures (fees, timelines, pass marks) may only be quoted from here, never from memory.
+            lines.append(f"Verified on {r['regulator']}'s own site ({checked['checked_at'][:10]}):\n{checked['summary'][:1800]}")
     lines.append("</country_norms>")
     return "\n".join(lines)
 

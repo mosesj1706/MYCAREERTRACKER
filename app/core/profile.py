@@ -15,7 +15,8 @@ PROFICIENCY_RANK = {"learning": 0, "familiar": 1, "hands_on": 2, "expert": 3}
 
 def build_from_text(resume_text: str, target_role: str) -> Profile:
     system = load_prompt("profile_builder").format(target_role=target_role, today=date.today().isoformat())
-    p = llm.extract(Profile, user=f"<resume>\n{resume_text}\n</resume>", system=system, effort="high", feature="profile_build")
+    # A full profile is long (every skill with its evidence): give it room so the JSON is not cut off.
+    p = llm.extract(Profile, user=f"<resume>\n{resume_text}\n</resume>", system=system, effort="high", max_tokens=21000, feature="profile_build")
     return plain_model(p)
 
 

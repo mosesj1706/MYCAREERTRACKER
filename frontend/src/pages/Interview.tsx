@@ -291,7 +291,7 @@ function Mcq() {
             <Button variant="primary" loading={gen.isPending} disabled={sel.length === 0 || (ot && !examId)} onClick={() => gen.mutate()}><BrainCircuit className="size-4" /> {gen.isPending ? (n > 10 ? "Writing the exam (1–2 min)…" : "Writing questions…") : format === "timed" ? "Start mock exam" : "Generate"}</Button>
           </div>
           {ot && format === "timed" && <p className="text-[12.5px] text-muted mt-2">Timed at the real exam's pace: about {perQuestion} seconds a question.</p>}
-          {ot && <p className="text-[12px] text-muted mt-3 flex gap-1.5"><Info className="size-3.5 shrink-0 mt-0.5" />AI-written practice in the style of the exam, not real exam questions. Each answer names where to read more; check anything surprising in your textbook.</p>}
+          {ot && <p className="text-[12px] text-muted mt-3 flex gap-1.5"><Info className="size-3.5 shrink-0 mt-0.5" />AI-written practice in the style of the exam, not real exam questions. A second review checks every answer key and drops disputed questions; still check anything surprising in your textbook.</p>}
         </Card>
         {ot && (catalogue.data?.no_exam.length ?? 0) > 0 && (
           <details className="px-1">

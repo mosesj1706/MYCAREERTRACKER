@@ -98,8 +98,29 @@ def generate_mcqs(topics: list[str], n: int, target_role: str, exam: dict | None
                                                  exam=exam["name"] if exam else "the licensing exam for the target country",
                                                  exam_style=style or "Computer-based multiple choice; four options, one best answer.")
     # Exam questions stay on Claude even when a free provider handles other basic calls: accuracy matters.
-    return llm.extract(MCQSet, user="Generate the questions now.", system=system, effort="low", feature="mcq",
-                       tier="judgment" if exam else "basic").questions[:n]  # the model sometimes adds one per topic
+    questions = llm.extract(MCQSet, user="Generate the questions now.", system=system, effort="low", feature="mcq",
+                            tier="judgment" if exam else "basic").questions[:n]  # the model sometimes adds one per topic
+    return _review(questions, exam) if exam else questions
+
+
+def _review(questions: list[MCQ], exam: dict) -> list[MCQ]:
+    """Second pass for licensing-exam practice: an independent review of each keyed answer. Wrong keys are
+    corrected, ambiguous or country-dependent questions are dropped, so she doesn't learn a wrong answer."""
+    from app.core.models import MCQReview
+    body = "\n\n".join(f"[{i}] {q.question}\n" + "\n".join(f"  {j}. {o}" for j, o in enumerate(q.options))
+                        + f"\n  keyed answer_index: {q.answer_index}\n  explanation: {q.explanation}" for i, q in enumerate(questions))
+    system = load_prompt("mcq_checker").format(exam=exam["name"])
+    review = llm.extract(MCQReview, user=f"<questions>\n{body}\n</questions>", system=system, effort="medium", feature="mcq_review")
+    verdict = {c.index: c for c in review.checks}
+    kept: list[MCQ] = []
+    for i, q in enumerate(questions):
+        c = verdict.get(i)
+        if c is None or c.verdict == "ok":
+            kept.append(q)
+        elif c.verdict == "fix" and c.answer_index is not None:
+            kept.append(q if c.answer_index == q.answer_index else
+                        q.model_copy(update={"answer_index": c.answer_index, "explanation": f"{c.reason} {q.explanation}"}))
+    return kept
 
 
 def record_mcq(q: MCQ, correct: bool, exam: str | None = None) -> None:

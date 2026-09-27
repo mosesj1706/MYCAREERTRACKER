@@ -27,6 +27,7 @@ from app.core import providers, usage
 log = logging.getLogger("mct.llm")
 
 MODEL = os.getenv("MCT_MODEL", "claude-sonnet-5")
+MAX_OUTPUT = 21000  # retry ceiling when a structured answer is cut off (the SDK requires streaming above ~21k)
 Tier = Literal["judgment", "basic"]
 
 T = TypeVar("T", bound=BaseModel)
@@ -122,6 +123,8 @@ def extract(
         return _extract_via_prompt(schema, user, system, effort, max_tokens, cached, feature, fallback)
     _record(feature, response.usage, fallback)
     if response.parsed_output is None:
+        if response.stop_reason == "max_tokens" and max_tokens < MAX_OUTPUT:  # cut off: one retry with more room
+            return extract(schema, user, system, effort, min(max_tokens * 2, MAX_OUTPUT), cached, feature, tier="judgment")
         raise RuntimeError(f"Model returned no parseable {schema.__name__} (stop_reason={response.stop_reason})")
     return response.parsed_output
 
@@ -146,6 +149,9 @@ def _extract_via_prompt(schema: Type[T], user: str, system: str | None, effort: 
         messages=[{"role": "user", "content": user}], output_config={"effort": effort},
     )
     _record(feature, response.usage, fallback)
+    if response.stop_reason == "max_tokens" and max_tokens < MAX_OUTPUT:
+        # The JSON was cut off mid-way: retry once with more room rather than fail on invalid JSON.
+        return _extract_via_prompt(schema, user, system, effort, min(max_tokens * 2, MAX_OUTPUT), cached, feature, fallback)
     text = "".join(b.text for b in response.content if b.type == "text")
     return schema.model_validate_json(_strip_fences(text))
 

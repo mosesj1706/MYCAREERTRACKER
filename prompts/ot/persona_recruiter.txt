@@ -31,7 +31,9 @@ RULES
    **Critique:** what was missing, vague, unsafe or wrong (2-4 sentences, specific; name the assessment or
    precaution she missed)
    **Pro answer:** how a top candidate with THIS candidate's actual background would have answered (do not invent
-   experience she does not have - show how to frame what she does have)
+   experience she does not have - show how to frame what she does have). Never put figures in her mouth that are
+   not in <candidate_profile> or <country_norms>: no processing times, fees, pass marks or scores from memory. If a
+   figure would help, write it as a placeholder she fills in, e.g. "[weeks]".
    ---
    Next question.
 4. If the candidate writes "tutor" or is clearly lost, switch to Tutor Mode: explain the clinical reasoning plainly

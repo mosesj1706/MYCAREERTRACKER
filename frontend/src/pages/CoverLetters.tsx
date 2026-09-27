@@ -9,6 +9,7 @@ import { Badge, Button, Card, Empty, Input, PageHeader, Segmented, Select, Switc
 import { CopyButton } from "../components/Copy";
 import { TellCheck } from "../components/TellCheck";
 import { useToast } from "../components/Toast";
+import { Checks } from "../components/Checks";
 
 type Length = "short" | "standard" | "long";
 type Tone = "formal" | "warm";
@@ -115,6 +116,7 @@ function LetterCard({ l, open, onToggle, countryName }: { l: CoverLetter; open: 
       </button>
       {open && (
         <div className="px-5 pb-5 border-t border-border pt-4 space-y-3">
+          <Checks checks={l.checks} />
           <Textarea rows={16} value={text} onChange={(e) => setText(e.target.value)} className={clsx("text-[14px] leading-relaxed font-[system-ui]")} />
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[12px] text-faint mr-auto">{words} words{dirty && <span className="text-warn"> · unsaved changes</span>}</span>

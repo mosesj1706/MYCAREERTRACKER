@@ -73,7 +73,8 @@ export interface JobAnalysis { company?: string | null; title: string; seniority
   summary: string; requirements: Requirement[]; red_flags: string[] }
 export interface RequirementMatch { skill: string; importance: "must_have" | "nice_to_have"; strength: "strong" | "partial" | "none"; evidence: string; how_to_close?: string | null }
 export interface MatchResult { matches: RequirementMatch[]; verdict: string; top_gaps: string[]; score: number }
-export interface TailoredOutput { summary: string; bullets: { original: string; rewritten: string; why: string }[]; keywords_added: string[]; cover_letter: string; honesty_notes: string[] }
+export interface TailoredOutput { summary: string; bullets: { original: string; rewritten: string; why: string }[]; keywords_added: string[]; cover_letter: string; honesty_notes: string[];
+  checks?: { kind: "number" | "licence"; quote: string; detail: string }[] }
 export interface Agency { name?: string; mea_registration?: string; contact?: string; fee_asked?: boolean; notes?: string }
 export interface Application { id: number; company?: string | null; title: string; url?: string | null; status: string; match_score: number; notes: string; created_at: string; updated_at: string; applied_at?: string | null; jd_text: string; job: JobAnalysis; match: MatchResult; tailored?: TailoredOutput | null;
   country?: string | null; agency?: Agency }
@@ -121,7 +122,8 @@ export interface CpdEntry { id: number; date: string; kind: string; title: strin
 export interface CpdPayload { entries: CpdEntry[]; kinds: string[]; summary: { total_hours: number; by_year: { year: string; hours: number }[]; by_kind: { kind: string; hours: number }[] } }
 export interface CaseStory { situation: string; task: string; action: string; result: string; resume_bullet: string; interview_questions: string[]; privacy_notes: string[] }
 export interface CaseStudy { id: number; title: string; input: Record<string, string>; story: CaseStory | null; created_at: string; updated_at: string }
-export interface CoverLetter { id: number; application_id?: number | null; title: string; country?: string | null; options: Record<string, unknown>; text: string; created_at: string; updated_at: string }
+export interface CoverLetter { id: number; application_id?: number | null; title: string; country?: string | null; options: Record<string, unknown>; text: string; created_at: string; updated_at: string;
+  checks?: { kind: "number" | "licence"; quote: string; detail: string }[] }
 export interface ExamInfo {
   id: string; name: string; regulator: string; country: string; country_name: string; route?: string; provider: string; official_url: string;
   format: string[]; seconds_per_question: number; style: string; topics: string[]; weights?: number[]; source: string; tracked: boolean; selected_country: boolean;

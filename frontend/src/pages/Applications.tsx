@@ -10,6 +10,7 @@ import { Drawer } from "../components/Drawer";
 import { CopyBlock } from "../components/Copy";
 import { TellCheck } from "../components/TellCheck";
 import { useToast } from "../components/Toast";
+import { Checks } from "../components/Checks";
 import { scoreTone, timeAgo } from "../lib/util";
 import { Link } from "react-router-dom";
 
@@ -165,6 +166,7 @@ function Detail({ a, onClose }: { a: Application; onClose: () => void }) {
         <Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Recruiter name, dates, what they asked, next step…" />
         <div className="flex justify-end"><Button size="sm" variant="primary" loading={save.isPending} onClick={() => save.mutate()}>Save</Button></div>
       </div>
+      {a.tailored && ot && <Checks checks={a.tailored.checks} />}
       {a.tailored && <><CopyBlock label="Tailored summary" text={a.tailored.summary} /><CopyBlock label="Cover letter" text={a.tailored.cover_letter} /><TellCheck url={`/api/applications/${a.id}/tells`} onApplied={inval} /></>}
       <details className="text-[13px]"><summary className="cursor-pointer text-muted hover:text-text">Job description</summary><pre className="mt-2 whitespace-pre-wrap font-sans text-[12.5px] text-muted leading-relaxed">{a.jd_text}</pre></details>
       <div className="pt-2 border-t border-border flex justify-end"><Button variant="danger" size="sm" onClick={() => confirm("Delete this application and its analysis?") && del.mutate()}><Trash2 className="size-4" /> Delete</Button></div>

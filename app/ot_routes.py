@@ -270,9 +270,14 @@ class LetterIn(BaseModel):
     extra: str = ""
 
 
+def _profile_or_none():
+    return profile_store.load() if profile_store.exists() else None
+
+
 @router.get("/cover-letters")
 def list_letters(app_id: int | None = None):
-    return letters.list_all(app_id)
+    p = _profile_or_none()
+    return [letters.with_checks(l, p) for l in letters.list_all(app_id)]
 
 
 @router.post("/cover-letters")
@@ -281,8 +286,9 @@ def generate_letter(body: LetterIn):
     if body.app_id and app is None:
         raise HTTPException(404, "Application not found.")
     try:
-        return letters.generate(_profile(), body.model_dump(exclude={"app_id", "jd_text", "country"}), application=app,
-                                jd_text=body.jd_text, country=body.country)
+        p = _profile()
+        return letters.with_checks(letters.generate(p, body.model_dump(exclude={"app_id", "jd_text", "country"}), application=app,
+                                                    jd_text=body.jd_text, country=body.country), p)
     except ValueError as e:
         raise HTTPException(400, str(e))
 
@@ -295,7 +301,7 @@ class LetterText(BaseModel):
 def patch_letter(letter_id: int, body: LetterText):
     if not letters.get(letter_id):
         raise HTTPException(404, "Letter not found.")
-    return letters.update_text(letter_id, body.text)
+    return letters.with_checks(letters.update_text(letter_id, body.text), _profile_or_none())
 
 
 @router.delete("/cover-letters/{letter_id}")

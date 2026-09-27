@@ -65,6 +65,16 @@ def generate(profile: Profile, options: dict, application: Application | None = 
         return _row(conn.execute("SELECT * FROM cover_letters WHERE id=?", (cur.lastrowid,)).fetchone())
 
 
+def with_checks(letter: dict, profile: Profile | None) -> dict:
+    """Attach authenticity findings: numbers not in her profile or the job ad, licence claims her tracker contradicts."""
+    if profile is None:
+        return letter | {"checks": []}
+    from app.core import factcheck, tracker
+    app = tracker.get(letter["application_id"]) if letter.get("application_id") else None
+    src = factcheck.sources_for(profile, app.jd_text if app else "")
+    return letter | {"checks": factcheck.check(letter["text"], src, factcheck.licence_done(), skip_first_line=True)}
+
+
 def list_all(app_id: int | None = None) -> list[dict]:
     db.init()
     with db.connect() as conn:

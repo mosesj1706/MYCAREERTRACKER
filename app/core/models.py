@@ -313,6 +313,17 @@ class MCQSet(BaseModel):
     questions: list[MCQ]
 
 
+class MCQCheck(BaseModel):
+    index: int = Field(description="0-based position of the question in the set")
+    verdict: Literal["ok", "fix", "drop"] = Field(description="ok = keyed answer is the single best answer; fix = another option is clearly best; drop = ambiguous, outdated, country-dependent or wrong beyond a key fix")
+    answer_index: int | None = Field(default=None, ge=0, le=3, description="For 'fix': the correct option index")
+    reason: str = Field(description="One sentence")
+
+
+class MCQReview(BaseModel):
+    checks: list[MCQCheck]
+
+
 # ---------------------------------------------------------------------------
 # Learning
 # ---------------------------------------------------------------------------
