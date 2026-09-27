@@ -62,6 +62,21 @@ def country(code: str | None) -> dict | None:
     return next((c for c in all_countries() if c["code"] == code), None)
 
 
+def exams() -> list[dict]:
+    """Every occupational therapy licensing exam in the packs, with its format and blueprint topics."""
+    return _raw()["exams"]
+
+
+def exam(exam_id: str | None) -> dict | None:
+    """An exam by id, or by the licence route it belongs to (older clients sent route ids)."""
+    return next((e for e in exams() if exam_id in (e["id"], e.get("route"))), None) if exam_id else None
+
+
+def no_exam_notes() -> list[dict]:
+    """Countries that register OTs without a licensing exam, and what they do instead."""
+    return _raw()["no_exam"]
+
+
 def cv_format(code: str | None) -> dict:
     """CV conventions for a country: photo (expected / optional / avoid), which personal details
     belong on it, paper size, 'CV' or 'Resume', length, references line. The international standard

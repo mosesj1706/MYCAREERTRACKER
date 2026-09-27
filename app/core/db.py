@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS licence_steps (
 MIGRATIONS = [
     ("applications", "country", "TEXT"),
     ("applications", "agency_json", "TEXT"),
+    ("mcq_results", "exam", "TEXT"),  # OT: the licensing exam being practised for
 ]
 
 

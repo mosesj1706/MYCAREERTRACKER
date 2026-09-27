@@ -122,3 +122,8 @@ export interface CpdPayload { entries: CpdEntry[]; kinds: string[]; summary: { t
 export interface CaseStory { situation: string; task: string; action: string; result: string; resume_bullet: string; interview_questions: string[]; privacy_notes: string[] }
 export interface CaseStudy { id: number; title: string; input: Record<string, string>; story: CaseStory | null; created_at: string; updated_at: string }
 export interface CoverLetter { id: number; application_id?: number | null; title: string; country?: string | null; options: Record<string, unknown>; text: string; created_at: string; updated_at: string }
+export interface ExamInfo {
+  id: string; name: string; regulator: string; country: string; country_name: string; route?: string; provider: string; official_url: string;
+  format: string[]; seconds_per_question: number; style: string; topics: string[]; weights?: number[]; source: string; tracked: boolean; selected_country: boolean;
+}
+export interface ExamsPayload { exams: ExamInfo[]; no_exam: { country: string; country_name: string; note: string; selected_country: boolean }[] }

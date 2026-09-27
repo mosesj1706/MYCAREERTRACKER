@@ -551,37 +551,34 @@ def interviews():
 class MCQGen(BaseModel):
     topics: list[str]
     n: int = 5
-    exam: str | None = None   # OT: a licence route id, e.g. "ae-dha" -> practise for that regulator's exam
+    exam: str | None = None   # OT: a licensing exam id, e.g. "dha" or "nbcot" (see /api/exams)
 
 
 @app.post("/api/mcq/generate")
 def mcq_generate(body: MCQGen):
     if not body.topics:
         raise HTTPException(400, "Pick at least one topic.")
-    exam = None
-    if body.exam:
-        try:
-            _, r = countries.route(body.exam)
-            exam = f"{r['exam_name']} ({r['exam_provider']}), {r['regulator_full']}" if r.get("exam_name") else r["regulator_full"]
-        except KeyError:
-            raise HTTPException(400, "Unknown exam.")
+    exam = countries.exam(body.exam) if body.exam else None
+    if body.exam and exam is None:
+        raise HTTPException(400, "Unknown exam.")
     return [q.model_dump() for q in interview.generate_mcqs(body.topics, min(max(body.n, 1), 30), _profile().target.primary_role, exam)]
 
 
 class MCQRecord(BaseModel):
     question: MCQ
     correct: bool
+    exam: str | None = None
 
 
 @app.post("/api/mcq/record")
 def mcq_record(body: MCQRecord):
-    interview.record_mcq(body.question, body.correct)
+    interview.record_mcq(body.question, body.correct, body.exam)
     return {"ok": True}
 
 
 @app.get("/api/mcq/stats")
-def mcq_stats():
-    return interview.mcq_stats()
+def mcq_stats(exam: str | None = None):
+    return interview.mcq_stats(exam)
 
 
 # ----------------------------------------------------------------------------- learning

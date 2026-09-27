@@ -3,8 +3,8 @@ import { useLocation } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import { clsx } from "clsx";
-import { Bot, Send, Square, Save, Trash2, User, BrainCircuit, History, CheckCircle2, XCircle, Mic, MicOff, Volume2, VolumeX, Timer, BookOpen, Info } from "lucide-react";
-import { api, streamSSE, type Application, type CaseStudy, type CountriesPayload, type Gap, type InterviewRecord, type MCQ, type Profile } from "../lib/api";
+import { Bot, Send, Square, Save, Trash2, User, BrainCircuit, History, CheckCircle2, XCircle, Mic, MicOff, Volume2, VolumeX, Timer, BookOpen, Info, ExternalLink } from "lucide-react";
+import { api, streamSSE, type Application, type CaseStudy, type CountriesPayload, type ExamsPayload, type Gap, type InterviewRecord, type MCQ, type Profile } from "../lib/api";
 import { flag, label, usePack } from "../lib/pack";
 import { Badge, Button, Card, CardHeader, Empty, PageHeader, Segmented, Select, Skeleton, Progress, SwitchRow } from "../components/ui";
 import { useToast } from "../components/Toast";
@@ -212,17 +212,20 @@ function Mcq() {
   const toast = useToast(); const qc = useQueryClient(); const pack = usePack();
   const ot = pack.key === "ot";
   const gaps = useQuery({ queryKey: ["gaps", 1], queryFn: () => api.get<Gap[]>("/api/gaps?min_jobs=1") });
-  const stats = useQuery({ queryKey: ["mcq-stats"], queryFn: () => api.get<{ topic: string; answered: number; accuracy: number }[]>("/api/mcq/stats") });
-  const ctry = useQuery({ queryKey: ["countries"], queryFn: () => api.get<CountriesPayload>("/api/countries"), enabled: ot });
-  // OT: licences, BLS and soft skills are requirements, not exam topics.
+  const catalogue = useQuery({ queryKey: ["exams"], queryFn: () => api.get<ExamsPayload>("/api/exams"), enabled: ot });
+  const [examId, setExamId] = useState<string>("");
+  const exams = catalogue.data?.exams ?? [];
+  useEffect(() => { if (ot && !examId && exams.length) setExamId((exams.find((e) => e.tracked) ?? exams.find((e) => e.selected_country) ?? exams[0]).id); }, [ot, examId, exams]);
+  const exam = exams.find((e) => e.id === examId);
+  const stats = useQuery({ queryKey: ["mcq-stats", ot ? examId : ""], queryFn: () => api.get<{ topic: string; answered: number; accuracy: number }[]>(`/api/mcq/stats${ot && examId ? `?exam=${examId}` : ""}`), enabled: !ot || !!examId });
+  // OT: licences, BLS and soft skills are requirements, not exam topics. Exams with a domain blueprint
+  // (NBCOT, NOTCE) practise by domain only.
   const gapTopics = (gaps.data ?? []).filter((g) => g.pressure > 0 && !(ot && ["credentials", "soft"].includes(g.category ?? ""))).slice(0, 8).map((g) => g.skill);
-  const base = ot ? pack.mcq_topics : [...gapTopics, ...pack.mcq_topics];
-  const pool = [...new Set(ot ? [...base, ...gapTopics.filter((g) => !base.includes(g)).slice(0, 4)] : base)];
+  const blueprint = !!exam && (exam.weights?.length || exam.id === "notce");
+  const base = ot ? (exam?.topics ?? pack.mcq_topics) : [...gapTopics, ...pack.mcq_topics];
+  const pool = [...new Set(ot ? [...base, ...(blueprint ? [] : gapTopics.filter((g) => !base.includes(g)).slice(0, 4))] : base)];
   const [topics, setTopics] = useState<string[] | null>(null);
-  const sel = topics ?? (ot ? pack.mcq_topics.slice(0, 3) : gapTopics.slice(0, 3));
-  const exams = (ctry.data?.summaries ?? []).map((s) => { const r = ctry.data!.countries.find((c) => c.code === s.country)?.routes.find((x) => x.id === s.route_id); return r?.exam_name ? { id: r.id, label: `${flag(s.country)} ${r.regulator} exam · ${r.exam_provider}` } : null; }).filter(Boolean) as { id: string; label: string }[];
-  const [exam, setExam] = useState<string>("");
-  useEffect(() => { if (ot && !exam && exams.length) setExam(exams[0].id); }, [ot, exam, exams]);
+  const sel = topics ?? (ot ? (blueprint ? base : base.slice(0, 3)) : gapTopics.slice(0, 3));
   const [format, setFormat] = useState<"quick" | "timed">("quick");
   const [n, setN] = useState(5);
   const [qs, setQs] = useState<MCQ[] | null>(null);
@@ -232,45 +235,70 @@ function Mcq() {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { if (!deadline || checked) return; const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, [deadline, checked]);
   const left = deadline ? Math.max(0, Math.round((deadline - now) / 1000)) : null;
+  const perQuestion = exam?.seconds_per_question ?? 72;  // the real exam's pace
+  const pick = (id: string) => { setExamId(id); setTopics(null); setQs(null); setDeadline(null); };
   const gen = useMutation({
-    mutationFn: () => api.post<MCQ[]>("/api/mcq/generate", { topics: sel, n, exam: ot ? exam || null : null }),
-    onSuccess: (r) => { setQs(r); setPicks({}); setChecked(false); setDeadline(format === "timed" ? Date.now() + r.length * 72_000 : null); setNow(Date.now()); },
+    mutationFn: () => api.post<MCQ[]>("/api/mcq/generate", { topics: sel, n, exam: ot ? examId || null : null }),
+    onSuccess: (r) => { setQs(r); setPicks({}); setChecked(false); setDeadline(format === "timed" ? Date.now() + r.length * perQuestion * 1000 : null); setNow(Date.now()); },
     onError: (e) => toast("error", (e as Error).message),
   });
   const check = async () => {
     if (!qs || checked) return;
     setChecked(true);
-    await Promise.all(qs.map((q, i) => api.post("/api/mcq/record", { question: q, correct: picks[i] === q.answer_index })));
+    await Promise.all(qs.map((q, i) => api.post("/api/mcq/record", { question: q, correct: picks[i] === q.answer_index, exam: ot ? examId || null : null })));
     qc.invalidateQueries({ queryKey: ["mcq-stats"] }); qc.invalidateQueries({ queryKey: ["analytics"] });
   };
   useEffect(() => { if (left === 0 && qs && !checked) { toast("info", "Time's up — marking your answers."); check(); } }, [left]); // eslint-disable-line react-hooks/exhaustive-deps
   const score = qs ? qs.filter((q, i) => picks[i] === q.answer_index).length : 0;
   const byTopic = qs && checked ? Object.entries(qs.reduce<Record<string, [number, number]>>((acc, q, i) => { const a = acc[q.topic] ?? [0, 0]; acc[q.topic] = [a[0] + (picks[i] === q.answer_index ? 1 : 0), a[1] + 1]; return acc; }, {})) : [];
   const instant = ot && format === "quick";  // OT quick-fire: feedback per question; tech: check at the end as before
+  const groups: [string, typeof exams][] = [
+    ["Your countries", exams.filter((e) => e.selected_country)],
+    ["Gulf", exams.filter((e) => !e.selected_country && ["AE", "SA", "QA", "OM", "KW", "BH"].includes(e.country))],
+    ["Other countries", exams.filter((e) => !e.selected_country && !["AE", "SA", "QA", "OM", "KW", "BH"].includes(e.country))],
+  ];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-4 items-start">
       <div className="space-y-4">
-        <Card className="p-5">
-          {ot && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-              <label className="text-[13px]"><div className="text-muted mb-1.5">Practising for</div>
-                <Select value={exam} onChange={(e) => setExam(e.target.value)} className="w-full">
-                  {exams.length === 0 && <option value="">Pick a country first (Countries & licence)</option>}
-                  {exams.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+        {ot && (
+          <Card className="p-5">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
+              <label className="text-[13px]"><div className="text-muted mb-1.5">Licensing exam</div>
+                <Select value={examId} onChange={(e) => pick(e.target.value)} className="w-full">
+                  {groups.map(([g, list]) => list.length > 0 && <optgroup key={g} label={g}>{list.map((e) => <option key={e.id} value={e.id}>{flag(e.country)} {e.name} · {e.country_name}</option>)}</optgroup>)}
                 </Select></label>
               <div className="text-[13px]"><div className="text-muted mb-1.5">Format</div>
                 <Segmented value={format} onChange={(v) => { setFormat(v); setN(v === "timed" ? 20 : 5); }} options={[{ value: "quick", label: "Quick-fire" }, { value: "timed", label: "Timed mock exam" }]} /></div>
             </div>
-          )}
-          <div className="text-[13px] text-muted mb-2">Topics{ot ? "" : " — defaults to your biggest gaps"}</div>
-          <div className="flex flex-wrap gap-1.5">{pool.map((t) => <button key={t} onClick={() => setTopics(sel.includes(t) ? sel.filter((x) => x !== t) : [...sel, t])} className={clsx("rounded-md border px-2.5 py-1 text-[12.5px] font-medium transition", sel.includes(t) ? "bg-accent text-white border-accent" : "border-border text-muted hover:border-border-strong")}>{t}</button>)}</div>
+            {exam && (
+              <div className="mt-4 rounded-[12px] bg-fill-2 px-4 py-3.5">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="min-w-0"><div className="font-semibold text-[15px]">{flag(exam.country)} {exam.name}</div><div className="text-[12.5px] text-muted">{exam.regulator} · {exam.provider}</div></div>
+                  <a href={exam.official_url} target="_blank" rel="noreferrer" className="text-[13px] text-accent hover:underline inline-flex items-center gap-1 shrink-0">Official site <ExternalLink className="size-3" /></a>
+                </div>
+                <ul className="mt-2.5 space-y-1 text-[13px]">{exam.format.map((f, i) => <li key={i} className="flex gap-2"><span className="text-faint">•</span><span>{f}</span></li>)}</ul>
+                <div className="text-[11.5px] text-faint mt-2">Source: {exam.source}. Rules change; check the official site before you book.</div>
+              </div>
+            )}
+          </Card>
+        )}
+        <Card className="p-5">
+          <div className="text-[13px] text-muted mb-2">{ot ? (blueprint ? "Exam domains" : "Topics") : "Topics — defaults to your biggest gaps"}</div>
+          <div className="flex flex-wrap gap-1.5">{pool.map((t, i) => <button key={t} onClick={() => setTopics(sel.includes(t) ? sel.filter((x) => x !== t) : [...sel, t])} className={clsx("rounded-full px-3 py-1 text-[13px] font-medium transition", sel.includes(t) ? "bg-accent text-white" : "bg-fill text-text hover:brightness-95")}>{t}{exam?.weights?.[i] != null && base.includes(t) ? <span className="opacity-70 ml-1">{exam.weights[i]}%</span> : null}</button>)}</div>
           <div className="flex items-center gap-3 mt-4 flex-wrap">
-            <Select value={n} onChange={(e) => setN(Number(e.target.value))}>{(format === "timed" ? [10, 20, 30] : [3, 5, 8, 10]).map((x) => <option key={x} value={x}>{x} questions{format === "timed" ? ` · ${Math.round(x * 1.2)} min` : ""}</option>)}</Select>
-            <Button variant="primary" loading={gen.isPending} disabled={sel.length === 0 || (ot && !exam && exams.length > 0)} onClick={() => gen.mutate()}><BrainCircuit className="size-4" /> {gen.isPending ? (n > 10 ? "Writing the exam (1–2 min)…" : "Writing questions…") : format === "timed" ? "Start mock exam" : "Generate"}</Button>
+            <Select value={n} onChange={(e) => setN(Number(e.target.value))} className="w-auto">{(format === "timed" ? [10, 20, 30] : [3, 5, 8, 10]).map((x) => <option key={x} value={x}>{x} questions{format === "timed" ? ` · ${Math.round((x * perQuestion) / 60)} min` : ""}</option>)}</Select>
+            <Button variant="primary" loading={gen.isPending} disabled={sel.length === 0 || (ot && !examId)} onClick={() => gen.mutate()}><BrainCircuit className="size-4" /> {gen.isPending ? (n > 10 ? "Writing the exam (1–2 min)…" : "Writing questions…") : format === "timed" ? "Start mock exam" : "Generate"}</Button>
           </div>
-          {ot && <p className="text-[12px] text-muted mt-3 flex gap-1.5"><Info className="size-3.5 shrink-0 mt-0.5" />AI-written practice in the style of the licensing exam, not real exam questions. Each answer names where to read more; check anything surprising in your textbook.</p>}
+          {ot && format === "timed" && <p className="text-[12.5px] text-muted mt-2">Timed at the real exam's pace: about {perQuestion} seconds a question.</p>}
+          {ot && <p className="text-[12px] text-muted mt-3 flex gap-1.5"><Info className="size-3.5 shrink-0 mt-0.5" />AI-written practice in the style of the exam, not real exam questions. Each answer names where to read more; check anything surprising in your textbook.</p>}
         </Card>
+        {ot && (catalogue.data?.no_exam.length ?? 0) > 0 && (
+          <details className="px-1">
+            <summary className="text-[13.5px] text-accent cursor-pointer">Countries without a licensing exam</summary>
+            <div className="mt-2 rounded-[12px] bg-fill-2 divide-y divide-border">{catalogue.data!.no_exam.map((c) => <div key={c.country} className="px-4 py-2.5 text-[13px]"><span className="font-medium">{flag(c.country)} {c.country_name}</span><span className="text-muted"> · {c.note}</span></div>)}</div>
+          </details>
+        )}
         {qs && (
           <div className="space-y-3">
             {deadline && !checked && (
@@ -283,11 +311,11 @@ function Mcq() {
             {qs.map((q, i) => { const ok = picks[i] === q.answer_index; const reveal = checked || (instant && picks[i] !== undefined); return (
               <Card key={i} className={clsx("p-5", reveal && (ok ? "border-success/40" : "border-danger/40"))}>
                 <div className="flex items-center gap-2 text-[12px] text-muted mb-2"><Badge>{q.topic}</Badge><Badge tone={q.difficulty === "deep" ? "accent" : "neutral"}>{q.difficulty}</Badge></div>
-                <div className="font-medium text-[14.5px] leading-relaxed">{i + 1}. {q.question}</div>
+                <div className="font-medium text-[15px] leading-relaxed">{i + 1}. {q.question}</div>
                 <div className="mt-3 space-y-1.5">
                   {q.options.map((o, j) => (
                     <button key={j} disabled={reveal} onClick={() => setPicks((p) => ({ ...p, [i]: j }))}
-                      className={clsx("w-full text-left rounded-lg border px-3 py-2.5 text-[13.5px] transition", picks[i] === j ? "border-accent bg-accent-soft/60" : "border-border hover:border-border-strong",
+                      className={clsx("w-full text-left rounded-[10px] border px-3.5 py-2.5 text-[14px] transition", picks[i] === j ? "border-accent bg-accent-soft/60" : "border-border hover:border-border-strong",
                         reveal && j === q.answer_index && "border-success bg-success-soft/60", reveal && picks[i] === j && j !== q.answer_index && "border-danger bg-danger-soft/60")}>
                       <span className="num text-faint mr-2">{"ABCD"[j]}</span>{o}
                     </button>
@@ -307,7 +335,7 @@ function Mcq() {
         )}
       </div>
       <Card>
-        <CardHeader title="Accuracy by topic" subtitle="Weakest first" />
+        <CardHeader title="Accuracy by topic" subtitle={ot && exam ? `${exam.name} · weakest first` : "Weakest first"} />
         <div className="px-5 pb-5 space-y-3">
           {stats.isLoading ? <Skeleton className="h-24" /> : (stats.data ?? []).length === 0 ? <div className="text-sm text-muted">Answer a set to start tracking.</div> : stats.data!.map((s) => (
             <div key={s.topic}><div className="flex justify-between text-[13px]"><span className="font-medium truncate">{s.topic}</span><span className="num text-muted">{s.accuracy}% · {s.answered}</span></div><Progress value={s.accuracy} tone={s.accuracy >= 75 ? "success" : s.accuracy >= 50 ? "warn" : "danger"} className="mt-1.5" /></div>

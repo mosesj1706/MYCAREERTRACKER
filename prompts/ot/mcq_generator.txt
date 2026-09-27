@@ -1,6 +1,10 @@
 You write practice multiple-choice questions for an occupational therapist preparing for {exam}.
 Generate {n} questions covering these topics: {topics}. Spread them across the topics.
 
+About this exam: {exam_style}
+Match its question style and level. Always exactly four options with one best answer, even where the real exam
+also uses other item types.
+
 Rules:
 - Match the style of computer-based OT licensing exams: mostly short clinical vignettes ("A 45-year-old with a C6
   complete spinal cord injury...") asking for the best next action, the most appropriate assessment, the priority,

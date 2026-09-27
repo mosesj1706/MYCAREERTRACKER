@@ -202,6 +202,332 @@
                   "official_url": "https://www.healthprofessionals.gov.sg/ahpc", "check_domains": ["healthprofessionals.gov.sg"], "steps": []}]
     }
   ],
+  "exams": [
+      {
+          "id": "dha",
+          "name": "DHA licensing exam",
+          "regulator": "Dubai Health Authority",
+          "country": "AE",
+          "route": "ae-dha",
+          "provider": "Prometric",
+          "official_url": "https://www.dha.gov.ae",
+          "format": [
+              "Computer-based, about 2 hours",
+              "About 100-150 multiple-choice questions",
+              "Pass mark 60-70% depending on the test",
+              "3 attempts"
+          ],
+          "seconds_per_question": 60,
+          "style": "Prometric-style computer-based exam: short clinical vignettes and direct knowledge questions across OT practice; four options, one best answer.",
+          "topics": [
+              "Neurological rehabilitation",
+              "Orthopaedics & hand therapy",
+              "Paediatrics & sensory integration",
+              "Mental health",
+              "Geriatrics & dementia",
+              "ADLs & assistive technology",
+              "Assessments & outcome measures",
+              "Anatomy, kinesiology & neuroanatomy",
+              "Splinting & orthotics",
+              "Wheelchair seating & positioning",
+              "Frames of reference & OT models",
+              "Ethics, safety & documentation"
+          ],
+          "source": "DHA licensing manual and exam guideline (read Sept 2026)"
+      },
+      {
+          "id": "doh",
+          "name": "DOH licensing exam",
+          "regulator": "Department of Health Abu Dhabi",
+          "country": "AE",
+          "route": "ae-doh",
+          "provider": "Pearson VUE",
+          "official_url": "https://www.doh.gov.ae",
+          "format": [
+              "Computer-based at Pearson VUE, booked via TAMM",
+              "Commonly 100 questions in 150 minutes",
+              "Pass mark about 60%; your TAMM eligibility message has the exact figures"
+          ],
+          "seconds_per_question": 90,
+          "style": "Pearson VUE computer-based exam: short clinical vignettes and direct knowledge questions across OT practice; four options, one best answer.",
+          "topics": [
+              "Neurological rehabilitation",
+              "Orthopaedics & hand therapy",
+              "Paediatrics & sensory integration",
+              "Mental health",
+              "Geriatrics & dementia",
+              "ADLs & assistive technology",
+              "Assessments & outcome measures",
+              "Anatomy, kinesiology & neuroanatomy",
+              "Splinting & orthotics",
+              "Wheelchair seating & positioning",
+              "Frames of reference & OT models",
+              "Ethics, safety & documentation"
+          ],
+          "source": "Pearson VUE DOH pages and exam guides (Sept 2026)"
+      },
+      {
+          "id": "mohap",
+          "name": "MOHAP licensing exam",
+          "regulator": "Ministry of Health and Prevention (UAE)",
+          "country": "AE",
+          "route": "ae-mohap",
+          "provider": "Prometric",
+          "official_url": "https://mohap.gov.ae",
+          "format": [
+              "Computer-based multiple-choice exam at a Prometric centre",
+              "Question count, time and pass mark are stated in your eligibility letter"
+          ],
+          "seconds_per_question": 72,
+          "style": "Prometric-style computer-based exam: short clinical vignettes and direct knowledge questions across OT practice; four options, one best answer.",
+          "topics": [
+              "Neurological rehabilitation",
+              "Orthopaedics & hand therapy",
+              "Paediatrics & sensory integration",
+              "Mental health",
+              "Geriatrics & dementia",
+              "ADLs & assistive technology",
+              "Assessments & outcome measures",
+              "Anatomy, kinesiology & neuroanatomy",
+              "Splinting & orthotics",
+              "Wheelchair seating & positioning",
+              "Frames of reference & OT models",
+              "Ethics, safety & documentation"
+          ],
+          "source": "MOHAP licensing (Sept 2026)"
+      },
+      {
+          "id": "scfhs",
+          "name": "SCFHS classification exam",
+          "regulator": "Saudi Commission for Health Specialties",
+          "country": "SA",
+          "route": "sa-scfhs",
+          "provider": "Prometric",
+          "official_url": "https://www.scfhs.org.sa",
+          "format": [
+              "Computer-based at Prometric",
+              "About 100-150 multiple-choice questions depending on the profession",
+              "Pass mark 60%",
+              "3 attempts"
+          ],
+          "seconds_per_question": 72,
+          "style": "Prometric-style computer-based exam: short clinical vignettes and direct knowledge questions across OT practice; four options, one best answer.",
+          "topics": [
+              "Neurological rehabilitation",
+              "Orthopaedics & hand therapy",
+              "Paediatrics & sensory integration",
+              "Mental health",
+              "Geriatrics & dementia",
+              "ADLs & assistive technology",
+              "Assessments & outcome measures",
+              "Anatomy, kinesiology & neuroanatomy",
+              "Splinting & orthotics",
+              "Wheelchair seating & positioning",
+              "Frames of reference & OT models",
+              "Ethics, safety & documentation"
+          ],
+          "source": "Prometric SCFHS FAQ (Sept 2026)"
+      },
+      {
+          "id": "dhp",
+          "name": "DHP licensing exam",
+          "regulator": "Department of Healthcare Professions, Qatar",
+          "country": "QA",
+          "route": "qa-dhp",
+          "provider": "Prometric",
+          "official_url": "https://www.moph.gov.qa",
+          "format": [
+              "Computer-based multiple-choice exam at a Prometric centre",
+              "Question count, time and pass mark are stated in your eligibility letter"
+          ],
+          "seconds_per_question": 72,
+          "style": "Prometric-style computer-based exam: short clinical vignettes and direct knowledge questions across OT practice; four options, one best answer.",
+          "topics": [
+              "Neurological rehabilitation",
+              "Orthopaedics & hand therapy",
+              "Paediatrics & sensory integration",
+              "Mental health",
+              "Geriatrics & dementia",
+              "ADLs & assistive technology",
+              "Assessments & outcome measures",
+              "Anatomy, kinesiology & neuroanatomy",
+              "Splinting & orthotics",
+              "Wheelchair seating & positioning",
+              "Frames of reference & OT models",
+              "Ethics, safety & documentation"
+          ],
+          "source": "DHP / Prometric (Sept 2026)"
+      },
+      {
+          "id": "omsb",
+          "name": "OMSB licensing exam",
+          "regulator": "Oman Medical Specialty Board",
+          "country": "OM",
+          "route": "om-omsb",
+          "provider": "Prometric",
+          "official_url": "https://www.omsb.gov.om",
+          "format": [
+              "Computer-based multiple-choice exam at a Prometric centre",
+              "Question count, time and pass mark are stated in your eligibility letter"
+          ],
+          "seconds_per_question": 72,
+          "style": "Prometric-style computer-based exam: short clinical vignettes and direct knowledge questions across OT practice; four options, one best answer.",
+          "topics": [
+              "Neurological rehabilitation",
+              "Orthopaedics & hand therapy",
+              "Paediatrics & sensory integration",
+              "Mental health",
+              "Geriatrics & dementia",
+              "ADLs & assistive technology",
+              "Assessments & outcome measures",
+              "Anatomy, kinesiology & neuroanatomy",
+              "Splinting & orthotics",
+              "Wheelchair seating & positioning",
+              "Frames of reference & OT models",
+              "Ethics, safety & documentation"
+          ],
+          "source": "OMSB / Prometric (Sept 2026)"
+      },
+      {
+          "id": "kw-moh",
+          "name": "Kuwait MOH licensing exam",
+          "regulator": "Ministry of Health, Kuwait",
+          "country": "KW",
+          "route": "kw-moh",
+          "provider": "Prometric",
+          "official_url": "https://medlic.moh.gov.kw",
+          "format": [
+              "Computer-based multiple-choice exam at a Prometric centre",
+              "Question count, time and pass mark are stated in your eligibility letter"
+          ],
+          "seconds_per_question": 72,
+          "style": "Prometric-style computer-based exam: short clinical vignettes and direct knowledge questions across OT practice; four options, one best answer.",
+          "topics": [
+              "Neurological rehabilitation",
+              "Orthopaedics & hand therapy",
+              "Paediatrics & sensory integration",
+              "Mental health",
+              "Geriatrics & dementia",
+              "ADLs & assistive technology",
+              "Assessments & outcome measures",
+              "Anatomy, kinesiology & neuroanatomy",
+              "Splinting & orthotics",
+              "Wheelchair seating & positioning",
+              "Frames of reference & OT models",
+              "Ethics, safety & documentation"
+          ],
+          "source": "Kuwait MOH / Prometric (Sept 2026)"
+      },
+      {
+          "id": "nhra",
+          "name": "NHRA licensing exam",
+          "regulator": "National Health Regulatory Authority, Bahrain",
+          "country": "BH",
+          "route": "bh-nhra",
+          "provider": "Prometric",
+          "official_url": "https://www.nhra.bh",
+          "format": [
+              "Computer-based multiple-choice exam at a Prometric centre",
+              "Question count, time and pass mark are stated in your eligibility letter"
+          ],
+          "seconds_per_question": 72,
+          "style": "Prometric-style computer-based exam: short clinical vignettes and direct knowledge questions across OT practice; four options, one best answer.",
+          "topics": [
+              "Neurological rehabilitation",
+              "Orthopaedics & hand therapy",
+              "Paediatrics & sensory integration",
+              "Mental health",
+              "Geriatrics & dementia",
+              "ADLs & assistive technology",
+              "Assessments & outcome measures",
+              "Anatomy, kinesiology & neuroanatomy",
+              "Splinting & orthotics",
+              "Wheelchair seating & positioning",
+              "Frames of reference & OT models",
+              "Ethics, safety & documentation"
+          ],
+          "source": "NHRA / Prometric (Sept 2026)"
+      },
+      {
+          "id": "nbcot",
+          "name": "NBCOT OTR exam",
+          "regulator": "National Board for Certification in Occupational Therapy",
+          "country": "US",
+          "route": "us-nbcot",
+          "provider": "Prometric",
+          "official_url": "https://www.nbcot.org/exam-info",
+          "format": [
+              "180 questions in 4 hours",
+              "Three- and four-option single-answer questions, plus six-option multi-select scenario sets",
+              "Scaled score 300-600; pass mark 450",
+              "Four domains: evaluation 23%, analysis and planning 23%, intervention 38%, practice management 16% (approximate)"
+          ],
+          "seconds_per_question": 80,
+          "style": "NBCOT OTR style: clinical scenarios asking for the best, first or most appropriate action by an entry-level OT; three or four options, one best answer. Weight towards selecting and managing interventions. (The real exam also has six-option multi-select sets; this practice uses single best answer.)",
+          "topics": [
+              "Evaluation & assessment",
+              "Analysis, interpretation & planning",
+              "Selection & management of intervention",
+              "Competency & practice management"
+          ],
+          "weights": [
+              23,
+              23,
+              38,
+              16
+          ],
+          "source": "NBCOT exam handbook and AOTA (Sept 2026)"
+      },
+      {
+          "id": "notce",
+          "name": "NOTCE",
+          "regulator": "Canadian Association of Occupational Therapists (CAOT)",
+          "country": "CA",
+          "route": "ca-acotro",
+          "provider": "CAOT (online)",
+          "official_url": "https://www.notce-enae.ca",
+          "format": [
+              "200 questions in 4 hours (two 2-hour sessions)",
+              "About 40 short cases, each followed by 3-5 questions",
+              "Four options, one best answer",
+              "New blueprint from the September 2026 sitting, based on the Competencies for Occupational Therapists in Canada (2021)",
+              "Taken after ACOTRO's substantial equivalency assessment (SEAS)"
+          ],
+          "seconds_per_question": 72,
+          "style": "NOTCE style: a short client case followed by questions about it, in a Canadian practice context (client-centred, occupation-based, culturally safe, evidence-informed); four options, one best answer. Start each question with a one-line reminder of its case. For references prefer Canadian sources (Competencies for Occupational Therapists in Canada 2021, CAOT publications) where they fit.",
+          "topics": [
+              "Occupational therapy expertise",
+              "Communication & collaboration",
+              "Culture, equity & justice",
+              "Excellence in practice",
+              "Professional responsibility",
+              "Engagement with the profession"
+          ],
+          "source": "NOTCE information and FAQ pages (Sept 2026)"
+      }
+  ],
+  "no_exam": [
+      {
+          "country": "GB",
+          "note": "No licensing exam. The HCPC assesses your qualifications and experience on paper (around 60 working days)."
+      },
+      {
+          "country": "IE",
+          "note": "No standard exam. If CORU finds gaps, it offers an aptitude test tailored to those gaps, or a period of adaptation."
+      },
+      {
+          "country": "AU",
+          "note": "No written exam. Since late 2025 Ahpra assesses qualifications directly; some applicants complete an assessment of competence during supervised practice."
+      },
+      {
+          "country": "NZ",
+          "note": "No licensing exam. The Occupational Therapy Board of New Zealand assesses applications."
+      },
+      {
+          "country": "SG",
+          "note": "No licensing exam. The Allied Health Professions Council assesses applications."
+      }
+  ],
   "steps": {
     "eligibility": {
       "title": "Check eligibility",

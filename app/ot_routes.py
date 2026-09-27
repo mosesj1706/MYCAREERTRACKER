@@ -72,6 +72,21 @@ def check_route(route_id: str):
         raise HTTPException(404, "Unknown route.")
 
 
+# ----------------------------------------------------------------------------- licensing exams
+@router.get("/exams")
+def list_exams():
+    """Every OT licensing exam (format, style, blueprint), the ones on her tracked routes first,
+    and the countries that register OTs without an exam."""
+    tracked = set(countries.tracked_routes())
+    selected = set(countries.selection()["selected"])
+    exams = countries.exams()
+    names = {c["code"]: c["name"] for c in countries.all_countries()}
+    return {"exams": [e | {"country_name": names.get(e["country"], e["country"]), "tracked": e.get("route") in tracked,
+                           "selected_country": e["country"] in selected} for e in exams],
+            "no_exam": [n | {"country_name": names.get(n["country"], n["country"]), "selected_country": n["country"] in selected}
+                        for n in countries.no_exam_notes()]}
+
+
 # ----------------------------------------------------------------------------- documents
 @router.get("/documents")
 def list_documents():

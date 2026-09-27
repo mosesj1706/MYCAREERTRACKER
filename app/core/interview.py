@@ -84,28 +84,38 @@ def list_sessions() -> list[dict]:
 # MCQs
 # ---------------------------------------------------------------------------
 
-def generate_mcqs(topics: list[str], n: int, target_role: str, exam: str | None = None) -> list[MCQ]:
-    """`exam` names the licensing exam being practised for (OT), e.g. 'DHA licensing exam (Prometric)'."""
+def generate_mcqs(topics: list[str], n: int, target_role: str, exam: dict | None = None) -> list[MCQ]:
+    """`exam` is a licensing exam from the OT pack (countries.exams()): its name, question style,
+    format and domain weights shape the questions."""
+    style = ""
+    if exam:
+        style = f"Exam: {exam['name']} ({exam['provider']}), {exam['regulator']}. Style: {exam['style']} Format: {'; '.join(exam['format'])}."
+        weights = dict(zip(exam.get("topics", []), exam.get("weights", [])))
+        chosen = {t: weights[t] for t in topics if t in weights}
+        if len(chosen) > 1:
+            style += " Spread the questions across the topics roughly in these proportions: " + ", ".join(f"{t} {w}%" for t, w in chosen.items()) + "."
     system = load_prompt("mcq_generator").format(target_role=target_role, n=n, topics=", ".join(topics),
-                                                 exam=exam or "the licensing exam for the target country")
+                                                 exam=exam["name"] if exam else "the licensing exam for the target country",
+                                                 exam_style=style or "Computer-based multiple choice; four options, one best answer.")
     # Exam questions stay on Claude even when a free provider handles other basic calls: accuracy matters.
     return llm.extract(MCQSet, user="Generate the questions now.", system=system, effort="low", feature="mcq",
-                       tier="judgment" if exam else "basic").questions
+                       tier="judgment" if exam else "basic").questions[:n]  # the model sometimes adds one per topic
 
 
-def record_mcq(q: MCQ, correct: bool) -> None:
+def record_mcq(q: MCQ, correct: bool, exam: str | None = None) -> None:
     db.init()
     with db.connect() as conn:
-        conn.execute("INSERT INTO mcq_results (topic, difficulty, correct, question) VALUES (?, ?, ?, ?)",
-                     (q.topic, q.difficulty, int(correct), q.question))
+        conn.execute("INSERT INTO mcq_results (topic, difficulty, correct, question, exam) VALUES (?, ?, ?, ?, ?)",
+                     (q.topic, q.difficulty, int(correct), q.question, exam))
 
 
-def mcq_stats() -> list[dict]:
-    """Per-topic accuracy, weakest first."""
+def mcq_stats(exam: str | None = None) -> list[dict]:
+    """Per-topic accuracy, weakest first; for one licensing exam when `exam` is given."""
     db.init()
     with db.connect() as conn:
         rows = conn.execute(
-            "SELECT topic, COUNT(*) n, SUM(correct) n_right FROM mcq_results GROUP BY topic"
+            "SELECT topic, COUNT(*) n, SUM(correct) n_right FROM mcq_results" + (" WHERE exam=?" if exam else "") + " GROUP BY topic",
+            (exam,) if exam else (),
         ).fetchall()
     out = [{"topic": r["topic"], "answered": r["n"], "accuracy": round(100 * r["n_right"] / r["n"])} for r in rows]
     return sorted(out, key=lambda d: (d["accuracy"], -d["answered"]))
