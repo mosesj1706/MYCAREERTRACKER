@@ -134,7 +134,8 @@ def propose_addition(profile: Profile, add: ProfileAddition) -> ProfileMerge:
     flags = "\n".join(f"- {f}" for f in profile.risk_flags)
     user = (f"<current_skills>\n{skills}\n</current_skills>\n\n<risk_flags>\n{flags}\n</risk_flags>\n\n"
             f"<addition>\n{add.model_dump_json(indent=1)}\n</addition>")
-    return plain_model(llm.extract(ProfileMerge, user=user, system=system, effort="medium", feature="profile_addition"))
+    return plain_model(llm.extract(ProfileMerge, user=user, system=system, effort="medium",
+                                   feature="profile_addition", tier="basic"))
 
 
 def apply_addition(profile: Profile, add: ProfileAddition, merge: ProfileMerge) -> tuple[Profile, list[dict]]:
@@ -210,7 +211,8 @@ def refresh_risk_flags(profile: Profile, github_notes: list[str] | None = None) 
     notes = "\n".join(f"- {n}" for n in (github_notes or []))
     user = (f"<candidate_profile>\n{profile.model_dump_json(indent=1, exclude={'risk_flags'})}\n</candidate_profile>"
             + (f"\n\n<github_notes>\n{notes}\n</github_notes>" if notes else ""))
-    return plain_model(llm.extract(RiskFlags, user=user, system=system, effort="medium", feature="risk_flags")).risk_flags
+    return plain_model(llm.extract(RiskFlags, user=user, system=system, effort="medium",
+                                   feature="risk_flags", tier="basic")).risk_flags
 
 
 # ----------------------------------------------------------------------------- LinkedIn export

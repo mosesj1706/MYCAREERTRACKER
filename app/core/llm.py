@@ -87,15 +87,17 @@ def complete(
     max_tokens: int = 16000,
     cached: str | None = None,
     feature: str = "other",
+    tier: Tier = "judgment",
 ) -> str:
+    model = _model_for(tier)
     response = client().messages.create(
-        model=MODEL,
+        model=model,
         max_tokens=max_tokens,
         system=_system_blocks(system, cached),
         messages=[{"role": "user", "content": user}],
-        output_config=_effort(MODEL, effort),
+        output_config=_effort(model, effort),
     )
-    _record(feature, response.usage)
+    _record(feature, response.usage, model=model)
     return "".join(b.text for b in response.content if b.type == "text")
 
 

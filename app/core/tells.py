@@ -218,7 +218,8 @@ def fix(text: str, kind: str = "prose", keep_lines: bool = False) -> tuple[str, 
     while passes < MAX_PASSES and any(f.weight >= 2 for f in report.findings):
         flagged = "\n".join(f"- [{f.rule}] {f.where}\n  -> {f.detail}" for f in report.findings if f.rule not in ("punctuation",))
         user = (f"<text kind=\"{kind}\">\n{text}\n</text>\n\n<flagged>\n{flagged}\n</flagged>")
-        out = plain(llm.complete(user, system=load_prompt("tell_fixer"), effort="low", max_tokens=4000, feature="tell_fix")).strip()
+        out = plain(llm.complete(user, system=load_prompt("tell_fixer"), effort="low", max_tokens=4000,
+                                 feature="tell_fix", tier="basic")).strip()
         out = "\n".join(l.strip().lstrip("-\u2022* ").strip() for l in out.splitlines()) if kind == "bullets" else out
         if keep_lines and len([l for l in out.splitlines() if l.strip()]) != n_lines:
             passes += 1
