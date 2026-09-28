@@ -30,13 +30,14 @@ def find_credentials(skills: list[str], profile: Profile) -> list[Credential]:
     response = llm.client().messages.create(
         model=llm.MODEL,
         max_tokens=6000,
-        tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": 4}],
+        # Each search's results are billed as input on the way back, so this is the main dial.
+        tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": 2}],
         messages=[{"role": "user", "content":
                    f"Find FREE courses, learning paths or assessments that end in a certificate, badge or accreditation "
                    f"for these skills: {wanted}. Target role: {profile.target.primary_role}. Search up to four times: "
                    f"first the vendors' own free training (sites like {issuers}), then 'free certificate' or 'free badge' "
                    f"plus the skill names. For each result note whether the credential itself is free or only the content. "
-                   f"List everything found with titles and URLs."}],
+                   f"List what you found as title and URL only - no descriptions, no commentary."}],
         output_config={"effort": "low"},
     )
     llm._record("web_search", response.usage)
@@ -49,7 +50,7 @@ def find_credentials(skills: list[str], profile: Profile) -> list[Credential]:
     if not found:
         return []
     model_notes = "".join(b.text for b in response.content if b.type == "text")
-    results_text = "\n".join(f"- {v['title']} | {v['url']}" for v in found.values())
+    results_text = "\n".join(f"- {v['title']} | {v['url']}" for v in list(found.values())[:40])
     system = load_prompt("credential_ranker").format(target_role=profile.target.primary_role, skills=wanted)
     user = (f"<search_results>\n{results_text}\n</search_results>\n\n<notes>\n{model_notes}\n</notes>\n\n"
             f"<candidate_profile_summary>\n{profile.summary}\n</candidate_profile_summary>")

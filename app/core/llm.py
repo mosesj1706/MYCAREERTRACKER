@@ -7,10 +7,13 @@ Every feature in the app goes through one of three calls:
 
 Cost controls, in order of effect:
   - MODEL comes from MCT_MODEL (default claude-sonnet-5); `effort` is the per-call dial.
-  - `cached=` puts a large stable block (the profile) in the system prompt with a 1-hour cache
-    breakpoint, so match -> tailor -> rescore re-read it at ~10% of the price.
+  - `cached=` puts a large stable block (the profile) FIRST in the system prompt with a 1-hour
+    cache breakpoint, so match -> tailor -> rescore re-read it at ~10% of the price. Ordering
+    matters: caching is a prefix match, so the block that is identical across features has to
+    come before the per-feature prompt, or every feature writes its own cache and reads none.
   - `tier="basic"` sends writing/simple-extraction calls to the free provider in
-    app/core/providers (Gemini or Ollama) and falls back to Claude on any failure.
+    app/core/providers (Gemini or Ollama) when one is configured, and otherwise to
+    BASIC_MODEL (Haiku 4.5, half Sonnet's price) rather than the main model.
   - Every call is logged to llm_usage with its cost (app/core/usage.py).
 """
 import json
@@ -27,6 +30,11 @@ from app.core import providers, usage
 log = logging.getLogger("mct.llm")
 
 MODEL = os.getenv("MCT_MODEL", "claude-sonnet-5")
+# Where tier="basic" goes when no free provider is configured. Haiku 4.5 is half Sonnet's price
+# and enough for writing and simple extraction. It does not accept output_config.effort (the API
+# rejects it), so _effort() drops that argument for it.
+BASIC_MODEL = os.getenv("MCT_BASIC_MODEL", "claude-haiku-4-5")
+NO_EFFORT_MODELS = {"claude-haiku-4-5"}
 Tier = Literal["judgment", "basic"]
 
 T = TypeVar("T", bound=BaseModel)
@@ -41,19 +49,33 @@ def client() -> anthropic.Anthropic:
     return _client
 
 
-def _system_blocks(system: str | None, cached: str | None) -> list[dict] | anthropic.NotGiven:
-    """Stable prompt first, then the cached block with a breakpoint. Prefix order matters for cache hits."""
+def _system_blocks(system: str | None, cached: str | None, ttl: str = "1h") -> list[dict] | anthropic.NotGiven:
+    """Cached block first with the breakpoint, then the per-feature prompt.
+
+    Caching matches on an exact prefix. The profile is the part that is identical across match,
+    tailor and rescore; the feature prompt is not. Putting the feature prompt first would give
+    every feature a different prefix, so each would write its own cache entry and read none.
+    """
     blocks: list[dict] = []
+    if cached:
+        blocks.append({"type": "text", "text": cached, "cache_control": {"type": "ephemeral", "ttl": ttl}})
     if system:
         blocks.append({"type": "text", "text": system})
-    if cached:
-        blocks.append({"type": "text", "text": cached, "cache_control": {"type": "ephemeral", "ttl": "1h"}})
     return blocks or anthropic.NOT_GIVEN
 
 
-def _record(feature: str, response_usage, fallback: bool = False) -> None:
+def _model_for(tier: Tier) -> str:
+    return BASIC_MODEL if tier == "basic" else MODEL
+
+
+def _effort(model: str, effort: str) -> dict | anthropic.NotGiven:
+    """output_config for a model, omitting effort where the API rejects it (Haiku 4.5)."""
+    return anthropic.NOT_GIVEN if model in NO_EFFORT_MODELS else {"effort": effort}
+
+
+def _record(feature: str, response_usage, fallback: bool = False, model: str | None = None) -> None:
     u = response_usage
-    usage.record(feature, "anthropic", MODEL,
+    usage.record(feature, "anthropic", model or MODEL,
                  input_tokens=u.input_tokens, cache_read=u.cache_read_input_tokens or 0,
                  cache_write=u.cache_creation_input_tokens or 0, output_tokens=u.output_tokens, fallback=fallback)
 
@@ -71,7 +93,7 @@ def complete(
         max_tokens=max_tokens,
         system=_system_blocks(system, cached),
         messages=[{"role": "user", "content": user}],
-        output_config={"effort": effort},
+        output_config=_effort(MODEL, effort),
     )
     _record(feature, response.usage)
     return "".join(b.text for b in response.content if b.type == "text")
@@ -84,13 +106,18 @@ def extract(
     effort: str = "medium",
     max_tokens: int = 16000,
     cached: str | None = None,
+    cache_ttl: str = "1h",
     feature: str = "other",
     tier: Tier = "judgment",
 ) -> T:
     """Structured output validated against `schema`.
 
-    tier="basic": try the configured free provider first; any error or invalid JSON falls back to
-    Claude (logged as a fallback). tier="judgment": Claude only.
+    tier="basic": try the configured free provider first, else BASIC_MODEL; any error or invalid
+    JSON falls back to the main model (logged as a fallback). tier="judgment": the main model.
+
+    cache_ttl: "1h" when the cached block will be re-read soon (match, rescore-all), "5m" for a
+    one-shot call - a 1-hour write costs 2x the input price and only pays for itself on a re-read,
+    while a 5-minute write costs 1.25x.
 
     On Claude, uses the API's constrained-output mode when the schema is small enough; for large
     schemas (the API rejects them with 'compiled grammar is too large') it falls back to putting the
@@ -107,20 +134,21 @@ def extract(
             log.warning("basic provider failed for %s (%s: %s); falling back to Claude", feature, type(e).__name__, e)
             fallback = True
 
+    model = _model_for(tier)
     try:
         response = client().messages.parse(
-            model=MODEL,
+            model=model,
             max_tokens=max_tokens,
-            system=_system_blocks(system, cached),
+            system=_system_blocks(system, cached, cache_ttl),
             messages=[{"role": "user", "content": user}],
             output_format=schema,
-            output_config={"effort": effort},
+            output_config=_effort(model, effort),
         )
     except anthropic.BadRequestError as e:
         if "grammar is too large" not in str(e):
             raise
-        return _extract_via_prompt(schema, user, system, effort, max_tokens, cached, feature, fallback)
-    _record(feature, response.usage, fallback)
+        return _extract_via_prompt(schema, user, system, effort, max_tokens, cached, feature, fallback, model)
+    _record(feature, response.usage, fallback, model)
     if response.parsed_output is None:
         raise RuntimeError(f"Model returned no parseable {schema.__name__} (stop_reason={response.stop_reason})")
     return response.parsed_output
@@ -134,18 +162,19 @@ def _strip_fences(text: str) -> str:
 
 
 def _extract_via_prompt(schema: Type[T], user: str, system: str | None, effort: str, max_tokens: int,
-                        cached: str | None, feature: str, fallback: bool) -> T:
+                        cached: str | None, feature: str, fallback: bool, model: str | None = None) -> T:
     schema_json = json.dumps(schema.model_json_schema(), indent=None)
     instructions = (
         "Respond with a single JSON object and nothing else - no prose, no markdown fences. "
         f"It must validate against this JSON schema:\n{schema_json}"
     )
     full_system = f"{system}\n\n{instructions}" if system else instructions
+    model = model or MODEL
     response = client().messages.create(
-        model=MODEL, max_tokens=max_tokens, system=_system_blocks(full_system, cached),
-        messages=[{"role": "user", "content": user}], output_config={"effort": effort},
+        model=model, max_tokens=max_tokens, system=_system_blocks(full_system, cached),
+        messages=[{"role": "user", "content": user}], output_config=_effort(model, effort),
     )
-    _record(feature, response.usage, fallback)
+    _record(feature, response.usage, fallback, model)
     text = "".join(b.text for b in response.content if b.type == "text")
     return schema.model_validate_json(_strip_fences(text))
 

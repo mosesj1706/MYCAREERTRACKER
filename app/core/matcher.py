@@ -32,8 +32,11 @@ def tailor(profile: Profile, job: JobAnalysis, result: MatchResult, jd_text: str
     half = round(years * 2) / 2  # 3.1 -> "3", 2.6 -> "2.5": what a person would say
     years_text = str(int(half)) if half == int(half) else f"{half:.1f}"
     system = load_prompt("tailor").format(years=years, years_text=years_text)
+    # 5m rather than 1h: tailor's output schema differs from the matcher's, so it can never read
+    # the cache match wrote (the schema renders before the system block, so the prefix differs).
+    # Its own write only pays for itself on a re-tailor, which happens soon after or not at all.
     out = llm.extract(TailoredOutput, user=user, system=system, cached=profile_block(profile),
-                      effort="medium", max_tokens=16000, feature="tailor")
+                      cache_ttl="5m", effort="medium", max_tokens=16000, feature="tailor")
     return plain_model(out)  # this text lands on the resume as written
 
 

@@ -3,7 +3,8 @@ from datetime import date, timedelta
 
 from app.core import db
 
-# USD per million tokens. Cache write = 1.25x input, cache read = 0.1x input.
+# USD per million tokens. Cache read = 0.1x input; cache write = 2x for the 1-hour TTL
+# this app uses (the 1.25x figure is the 5-minute TTL).
 PRICES = {
     "claude-opus-5": (5.0, 25.0),
     "claude-sonnet-5": (2.0, 10.0),
@@ -31,7 +32,7 @@ def cost(model: str, input_tokens: int, cache_read: int, cache_write: int, outpu
     if model not in PRICES:
         return 0.0
     inp, out = PRICES[model]
-    return (input_tokens * inp + cache_read * inp * 0.1 + cache_write * inp * 1.25 + output_tokens * out) / 1_000_000
+    return (input_tokens * inp + cache_read * inp * 0.1 + cache_write * inp * 2.0 + output_tokens * out) / 1_000_000
 
 
 def record(feature: str, provider: str, model: str, input_tokens: int = 0, cache_read: int = 0,
