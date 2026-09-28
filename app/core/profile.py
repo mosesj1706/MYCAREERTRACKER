@@ -5,7 +5,7 @@ from pathlib import Path
 
 from app.core import llm
 from app.core.config import PROFILE_PATH, load_prompt
-from app.core.models import GitHubMerge, LinkedInCopy, Profile, ProfileAddition, ProfileMerge, RiskFlags, Skill
+from app.core.models import GitHubMerge, LinkedInCopy, Profile, ProfileAddition, ProfileMerge, RiskFlags, Skill, parse_ym
 from app.core.text import plain, plain_model
 from connectors.github import GitHubSnapshot
 from connectors.resume_pdf import extract_text
@@ -218,14 +218,14 @@ LINKEDIN_MAX = 2000  # LinkedIn's limit for a position or project description
 
 
 def _month(ym: str | None) -> str:
-    if not ym:
+    """'2023-11' -> 'Nov 2023'; a year-only date stays '2023'."""
+    if not ym or parse_ym(ym) is None:
         return "Present"
-    y, m = ym.split("-")
-    return f"{date(int(y), int(m), 1):%b %Y}"
+    return f"{date(*parse_ym(ym), 1):%b %Y}" if "-" in ym else ym.strip()
 
 
 def _months_between(a: str, b: str) -> int:
-    (ay, am), (by, bm) = (map(int, a.split("-")), map(int, b.split("-")))
+    (ay, am), (by, bm) = parse_ym(a) or (0, 0), parse_ym(b) or (0, 0)
     return (by - ay) * 12 + (bm - am)
 
 

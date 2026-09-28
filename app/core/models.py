@@ -5,6 +5,18 @@ from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
+
+def parse_ym(value: str | None) -> tuple[int, int] | None:
+    """'2023-11' -> (2023, 11). A resume that gives only the year ('2023') -> (2023, 6): the month is
+    unknown, so mid-year neither stretches nor cuts a duration. None or 'Present' -> None."""
+    if not value:
+        return None
+    parts = value.strip().split("-")
+    if not parts[0].isdigit():
+        return None
+    return int(parts[0]), int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 6
+
+
 SkillCategory = Literal[
     "cloud", "data_engineering", "programming", "devops", "ml_ai", "databases", "tools", "soft"
 ]
@@ -108,10 +120,13 @@ class Profile(BaseModel):
 
     def total_experience_years(self) -> float:
         months = 0
+        today = (date.today().year, date.today().month)
         for e in self.experience:
-            sy, sm = map(int, e.start.split("-"))
-            ey, em = map(int, (e.end or date.today().strftime("%Y-%m")).split("-"))
-            months += (ey - sy) * 12 + (em - sm)
+            start = parse_ym(e.start)
+            if start is None:
+                continue
+            end = parse_ym(e.end) or today
+            months += max(0, (end[0] - start[0]) * 12 + (end[1] - start[1]))
         return round(months / 12, 1)
 
 

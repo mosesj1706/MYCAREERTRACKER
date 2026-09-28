@@ -14,7 +14,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import HRFlowable, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from app.core.models import Profile, TailoredOutput
+from app.core.models import Profile, TailoredOutput, parse_ym
 from app.core.text import plain
 from connectors import github
 
@@ -44,10 +44,10 @@ def _esc(s: str) -> str:
 
 
 def _month(ym: str | None) -> str:
-    if not ym:
+    """'2023-11' -> 'Nov 2023'; a year-only date stays '2023'."""
+    if not ym or parse_ym(ym) is None:
         return "Present"
-    y, m = ym.split("-")
-    return f"{date(int(y), int(m), 1):%b %Y}"
+    return f"{date(*parse_ym(ym), 1):%b %Y}" if "-" in ym else ym.strip()
 
 
 def _link(url: str, label: str | None = None) -> str:

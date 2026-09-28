@@ -640,7 +640,8 @@ if STATIC.exists():
 
     @app.get("/{path:path}")
     def spa(path: str):
-        target = STATIC / path
-        if path and target.is_file():
+        target = (STATIC / path).resolve()
+        # resolve + containment check: a "../" path must never reach .env or the data directory
+        if path and target.is_file() and target.is_relative_to(STATIC.resolve()):
             return FileResponse(target)
         return FileResponse(STATIC / "index.html")
