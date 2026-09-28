@@ -147,7 +147,7 @@ function UploadDrawer({ category, categories, onClose }: { category: string | nu
           <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const x = e.target.files?.[0] ?? null; setFile(x); if (x && !f.title) setF((s) => ({ ...s, title: x.name.replace(/\.[^.]+$/, "") })); }} />
         </label>
         <label className="block text-[13px] text-muted">What is it?<CategorySelect value={f.category} onChange={(v) => setF({ ...f, category: v })} categories={categories} /></label>
-        <label className="block text-[13px] text-muted">Title<Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="e.g. Experience letter, CMC Vellore" className="mt-1" /></label>
+        <label className="block text-[13px] text-muted">Title<Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="e.g. Experience letter from your current hospital" className="mt-1" /></label>
         <label className="block text-[13px] text-muted">Expiry date (if it expires)<Input type="date" value={f.expires} onChange={(e) => setF({ ...f, expires: e.target.value })} className="mt-1" /></label>
         <label className="block text-[13px] text-muted">Notes<Textarea rows={2} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="Attested? Original with you? Reference number?" className="mt-1" /></label>
         <Button variant="primary" className="w-full" size="lg" disabled={!file || !f.category} loading={up.isPending} onClick={() => up.mutate()}><Upload className="size-4" /> Upload</Button>
