@@ -87,6 +87,7 @@ def extract(
     cached: str | None = None,
     feature: str = "other",
     tier: Tier = "judgment",
+    timeout: float | None = None,
 ) -> T:
     """Structured output validated against `schema`.
 
@@ -96,6 +97,9 @@ def extract(
     On Claude, uses the API's constrained-output mode when the schema is small enough; for large
     schemas (the API rejects them with 'compiled grammar is too large') it falls back to putting the
     JSON schema in the prompt and validating the reply locally.
+
+    timeout: seconds per attempt (one retry) instead of the SDK's ten minutes (two retries), for calls
+    someone is waiting on that should fail fast rather than stall.
     """
     fallback = False
     if tier == "basic" and providers.available():
@@ -108,8 +112,9 @@ def extract(
             log.warning("basic provider failed for %s (%s: %s); falling back to Claude", feature, type(e).__name__, e)
             fallback = True
 
+    c = client() if timeout is None else client().with_options(timeout=timeout, max_retries=1)
     try:
-        response = client().messages.parse(
+        response = c.messages.parse(
             model=MODEL,
             max_tokens=max_tokens,
             system=_system_blocks(system, cached),
@@ -120,11 +125,11 @@ def extract(
     except anthropic.BadRequestError as e:
         if "grammar is too large" not in str(e):
             raise
-        return _extract_via_prompt(schema, user, system, effort, max_tokens, cached, feature, fallback)
+        return _extract_via_prompt(schema, user, system, effort, max_tokens, cached, feature, fallback, timeout)
     _record(feature, response.usage, fallback)
     if response.parsed_output is None:
         if response.stop_reason == "max_tokens" and max_tokens < MAX_OUTPUT:  # cut off: one retry with more room
-            return extract(schema, user, system, effort, min(max_tokens * 2, MAX_OUTPUT), cached, feature, tier="judgment")
+            return extract(schema, user, system, effort, min(max_tokens * 2, MAX_OUTPUT), cached, feature, tier="judgment", timeout=timeout)
         raise RuntimeError(f"Model returned no parseable {schema.__name__} (stop_reason={response.stop_reason})")
     return response.parsed_output
 
@@ -137,21 +142,22 @@ def _strip_fences(text: str) -> str:
 
 
 def _extract_via_prompt(schema: Type[T], user: str, system: str | None, effort: str, max_tokens: int,
-                        cached: str | None, feature: str, fallback: bool) -> T:
+                        cached: str | None, feature: str, fallback: bool, timeout: float | None = None) -> T:
     schema_json = json.dumps(schema.model_json_schema(), indent=None)
     instructions = (
         "Respond with a single JSON object and nothing else - no prose, no markdown fences. "
         f"It must validate against this JSON schema:\n{schema_json}"
     )
     full_system = f"{system}\n\n{instructions}" if system else instructions
-    response = client().messages.create(
+    c = client() if timeout is None else client().with_options(timeout=timeout, max_retries=1)
+    response = c.messages.create(
         model=MODEL, max_tokens=max_tokens, system=_system_blocks(full_system, cached),
         messages=[{"role": "user", "content": user}], output_config={"effort": effort},
     )
     _record(feature, response.usage, fallback)
     if response.stop_reason == "max_tokens" and max_tokens < MAX_OUTPUT:
         # The JSON was cut off mid-way: retry once with more room rather than fail on invalid JSON.
-        return _extract_via_prompt(schema, user, system, effort, min(max_tokens * 2, MAX_OUTPUT), cached, feature, fallback)
+        return _extract_via_prompt(schema, user, system, effort, min(max_tokens * 2, MAX_OUTPUT), cached, feature, fallback, timeout)
     text = "".join(b.text for b in response.content if b.type == "text")
     return schema.model_validate_json(_strip_fences(text))
 

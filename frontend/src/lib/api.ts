@@ -127,5 +127,9 @@ export interface CoverLetter { id: number; application_id?: number | null; title
 export interface ExamInfo {
   id: string; name: string; regulator: string; country: string; country_name: string; route?: string; provider: string; official_url: string;
   format: string[]; seconds_per_question: number; style: string; topics: string[]; weights?: number[]; source: string; tracked: boolean; selected_country: boolean;
+  mock: { questions: number; minutes: number; pass_percent?: number | null; published: boolean };
 }
 export interface ExamsPayload { exams: ExamInfo[]; no_exam: { country: string; country_name: string; note: string; selected_country: boolean }[] }
+export interface ExamItem { position: number; question_id: number; topic: string; difficulty: string; question: string; options: string[]; answer_index: number; explanation: string; reference?: string | null; picked?: number | null; correct?: number | null; flagged: boolean }
+export interface ExamSession { id: number; exam: string; mode: "quick" | "timed" | "full"; source: "new" | "bank" | "mistakes"; total: number; time_limit?: number | null; seconds_used?: number | null; correct?: number | null; created_at: string; finished_at?: string | null; items: ExamItem[]; by_topic: { topic: string; correct: number; total: number; percent: number }[] }
+export interface ExamBank { total: number; answered: number; mistakes: number; by_topic: Record<string, number>; sessions: Omit<ExamSession, "items" | "by_topic">[] }

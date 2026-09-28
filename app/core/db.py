@@ -84,6 +84,41 @@ CREATE TABLE IF NOT EXISTS cover_letters (
     created_at     TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     updated_at     TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
+CREATE TABLE IF NOT EXISTS exam_questions (   -- OT: every reviewed practice question, per licensing exam
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    exam         TEXT NOT NULL,
+    topic        TEXT NOT NULL,
+    difficulty   TEXT NOT NULL,
+    question     TEXT NOT NULL,
+    options_json TEXT NOT NULL,
+    answer_index INTEGER NOT NULL,
+    explanation  TEXT NOT NULL,
+    reference    TEXT,
+    qhash        TEXT NOT NULL,             -- normalised question text, to keep the bank free of repeats
+    created_at   TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    UNIQUE (exam, qhash)
+);
+CREATE TABLE IF NOT EXISTS exam_sessions (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    exam         TEXT NOT NULL,
+    mode         TEXT NOT NULL,             -- quick | timed | full
+    source       TEXT NOT NULL,             -- new | bank | mistakes
+    total        INTEGER NOT NULL,
+    time_limit   INTEGER,                   -- seconds; null = untimed
+    seconds_used INTEGER,
+    correct      INTEGER,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    finished_at  TEXT
+);
+CREATE TABLE IF NOT EXISTS exam_answers (
+    session_id  INTEGER NOT NULL REFERENCES exam_sessions(id) ON DELETE CASCADE,
+    position    INTEGER NOT NULL,
+    question_id INTEGER NOT NULL REFERENCES exam_questions(id) ON DELETE CASCADE,
+    picked      INTEGER,
+    correct     INTEGER,
+    flagged     INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (session_id, position)
+);
 CREATE TABLE IF NOT EXISTS licence_steps (
     route_id   TEXT NOT NULL,
     step_id    TEXT NOT NULL,

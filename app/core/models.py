@@ -313,6 +313,15 @@ class MCQSet(BaseModel):
     questions: list[MCQ]
 
 
+class MCQConcept(BaseModel):
+    topic: str
+    concept: str = Field(description="The one specific point a question will test, under 15 words, e.g. 'tenodesis grasp in C6 tetraplegia'")
+
+
+class MCQPlan(BaseModel):
+    concepts: list[MCQConcept]
+
+
 class MCQCheck(BaseModel):
     index: int = Field(description="0-based position of the question in the set")
     verdict: Literal["ok", "fix", "drop"] = Field(description="ok = keyed answer is the single best answer; fix = another option is clearly best; drop = ambiguous, outdated, country-dependent or wrong beyond a key fix")

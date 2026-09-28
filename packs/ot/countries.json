@@ -233,7 +233,13 @@
               "Frames of reference & OT models",
               "Ethics, safety & documentation"
           ],
-          "source": "DHA licensing manual and exam guideline (read Sept 2026)"
+          "source": "DHA licensing manual and exam guideline (read Sept 2026)",
+          "mock": {
+              "questions": 100,
+              "minutes": 120,
+              "pass_percent": 60,
+              "published": true
+          }
       },
       {
           "id": "doh",
@@ -264,7 +270,13 @@
               "Frames of reference & OT models",
               "Ethics, safety & documentation"
           ],
-          "source": "Pearson VUE DOH pages and exam guides (Sept 2026)"
+          "source": "Pearson VUE DOH pages and exam guides (Sept 2026)",
+          "mock": {
+              "questions": 100,
+              "minutes": 150,
+              "pass_percent": 60,
+              "published": true
+          }
       },
       {
           "id": "mohap",
@@ -294,7 +306,13 @@
               "Frames of reference & OT models",
               "Ethics, safety & documentation"
           ],
-          "source": "MOHAP licensing (Sept 2026)"
+          "source": "MOHAP licensing (Sept 2026)",
+          "mock": {
+              "questions": 100,
+              "minutes": 120,
+              "pass_percent": null,
+              "published": false
+          }
       },
       {
           "id": "scfhs",
@@ -326,7 +344,13 @@
               "Frames of reference & OT models",
               "Ethics, safety & documentation"
           ],
-          "source": "Prometric SCFHS FAQ (Sept 2026)"
+          "source": "Prometric SCFHS FAQ (Sept 2026)",
+          "mock": {
+              "questions": 100,
+              "minutes": 120,
+              "pass_percent": 60,
+              "published": true
+          }
       },
       {
           "id": "dhp",
@@ -356,7 +380,13 @@
               "Frames of reference & OT models",
               "Ethics, safety & documentation"
           ],
-          "source": "DHP / Prometric (Sept 2026)"
+          "source": "DHP / Prometric (Sept 2026)",
+          "mock": {
+              "questions": 100,
+              "minutes": 120,
+              "pass_percent": null,
+              "published": false
+          }
       },
       {
           "id": "omsb",
@@ -386,7 +416,13 @@
               "Frames of reference & OT models",
               "Ethics, safety & documentation"
           ],
-          "source": "OMSB / Prometric (Sept 2026)"
+          "source": "OMSB / Prometric (Sept 2026)",
+          "mock": {
+              "questions": 100,
+              "minutes": 120,
+              "pass_percent": null,
+              "published": false
+          }
       },
       {
           "id": "kw-moh",
@@ -416,7 +452,13 @@
               "Frames of reference & OT models",
               "Ethics, safety & documentation"
           ],
-          "source": "Kuwait MOH / Prometric (Sept 2026)"
+          "source": "Kuwait MOH / Prometric (Sept 2026)",
+          "mock": {
+              "questions": 100,
+              "minutes": 120,
+              "pass_percent": null,
+              "published": false
+          }
       },
       {
           "id": "nhra",
@@ -446,7 +488,13 @@
               "Frames of reference & OT models",
               "Ethics, safety & documentation"
           ],
-          "source": "NHRA / Prometric (Sept 2026)"
+          "source": "NHRA / Prometric (Sept 2026)",
+          "mock": {
+              "questions": 100,
+              "minutes": 120,
+              "pass_percent": null,
+              "published": false
+          }
       },
       {
           "id": "nbcot",
@@ -476,7 +524,13 @@
               38,
               16
           ],
-          "source": "NBCOT exam handbook and AOTA (Sept 2026)"
+          "source": "NBCOT exam handbook and AOTA (Sept 2026)",
+          "mock": {
+              "questions": 180,
+              "minutes": 240,
+              "pass_percent": null,
+              "published": true
+          }
       },
       {
           "id": "notce",
@@ -503,7 +557,13 @@
               "Professional responsibility",
               "Engagement with the profession"
           ],
-          "source": "NOTCE information and FAQ pages (Sept 2026)"
+          "source": "NOTCE information and FAQ pages (Sept 2026)",
+          "mock": {
+              "questions": 200,
+              "minutes": 240,
+              "pass_percent": null,
+              "published": true
+          }
       }
   ],
   "no_exam": [

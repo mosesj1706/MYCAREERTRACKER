@@ -8,6 +8,7 @@ import { api, streamSSE, type Application, type CaseStudy, type CountriesPayload
 import { flag, label, usePack } from "../lib/pack";
 import { Badge, Button, Card, CardHeader, Empty, PageHeader, Segmented, Select, Skeleton, Progress, SwitchRow } from "../components/ui";
 import { useToast } from "../components/Toast";
+import ExamPractice from "./ExamPractice";
 
 type Msg = { role: "user" | "assistant"; content: string };
 type Tab = "mock" | "mcq" | "history";
@@ -26,7 +27,7 @@ export default function Interview() {
     <div>
       <PageHeader title={pack.key === "ot" ? "Interview practice" : "Interview playground"} subtitle={label(pack, "interviewer", "A recruiter who has read your profile, the job, and your gaps — and goes straight for them.")}
         actions={<Segmented value={tab} onChange={setTab} options={[{ value: "mock", label: "Mock interview" }, { value: "mcq", label: label(pack, "mcq_tab", "Quick-fire MCQs") }, { value: "history", label: "Past sessions" }]} />} />
-      {tab === "mock" && <Mock init={loc.state} />}{tab === "mcq" && <Mcq />}{tab === "history" && <HistoryTab />}
+      {tab === "mock" && <Mock init={loc.state} />}{tab === "mcq" && (pack.key === "ot" ? <ExamPractice /> : <Mcq />)}{tab === "history" && <HistoryTab />}
     </div>
   );
 }

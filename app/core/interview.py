@@ -84,23 +84,30 @@ def list_sessions() -> list[dict]:
 # MCQs
 # ---------------------------------------------------------------------------
 
-def generate_mcqs(topics: list[str], n: int, target_role: str, exam: dict | None = None) -> list[MCQ]:
+def exam_style(exam: dict, topics: list[str]) -> str:
+    style = f"Exam: {exam['name']} ({exam['provider']}), {exam['regulator']}. Style: {exam['style']} Format: {'; '.join(exam['format'])}."
+    weights = dict(zip(exam.get("topics", []), exam.get("weights", [])))
+    chosen = {t: weights[t] for t in topics if t in weights}
+    if len(chosen) > 1:
+        style += " Spread the questions across the topics roughly in these proportions: " + ", ".join(f"{t} {w}%" for t, w in chosen.items()) + "."
+    return style
+
+
+def generate_mcqs(topics: list[str], n: int, target_role: str, exam: dict | None = None,
+                  concepts: list[str] | None = None) -> list[MCQ]:
     """`exam` is a licensing exam from the OT pack (countries.exams()): its name, question style,
-    format and domain weights shape the questions."""
-    style = ""
-    if exam:
-        style = f"Exam: {exam['name']} ({exam['provider']}), {exam['regulator']}. Style: {exam['style']} Format: {'; '.join(exam['format'])}."
-        weights = dict(zip(exam.get("topics", []), exam.get("weights", [])))
-        chosen = {t: weights[t] for t in topics if t in weights}
-        if len(chosen) > 1:
-            style += " Spread the questions across the topics roughly in these proportions: " + ", ".join(f"{t} {w}%" for t, w in chosen.items()) + "."
+    format and domain weights shape the questions. `concepts` ("topic: point", one per question) come
+    from exams.plan so parallel batches don't write the same question."""
     system = load_prompt("mcq_generator").format(target_role=target_role, n=n, topics=", ".join(topics),
                                                  exam=exam["name"] if exam else "the licensing exam for the target country",
-                                                 exam_style=style or "Computer-based multiple choice; four options, one best answer.")
+                                                 exam_style=exam_style(exam, topics) if exam else "Computer-based multiple choice; four options, one best answer.")
+    user = "Generate the questions now."
+    if concepts:
+        user = "Write exactly one question for each of these, in this order (topic: what it tests):\n" + "\n".join(f"- {c}" for c in concepts)
     # Exam questions stay on Claude even when a free provider handles other basic calls: accuracy matters.
-    questions = llm.extract(MCQSet, user="Generate the questions now.", system=system, effort="low", feature="mcq",
-                            tier="judgment" if exam else "basic").questions[:n]  # the model sometimes adds one per topic
-    return _review(questions, exam) if exam else questions
+    questions = llm.extract(MCQSet, user=user, system=system, effort="low", feature="mcq", tier="judgment" if exam else "basic",
+                            timeout=120 if exam else None).questions[:n]  # the model sometimes adds one per topic
+    return _review(questions, exam) if exam and questions else questions
 
 
 def _review(questions: list[MCQ], exam: dict) -> list[MCQ]:
@@ -110,7 +117,8 @@ def _review(questions: list[MCQ], exam: dict) -> list[MCQ]:
     body = "\n\n".join(f"[{i}] {q.question}\n" + "\n".join(f"  {j}. {o}" for j, o in enumerate(q.options))
                         + f"\n  keyed answer_index: {q.answer_index}\n  explanation: {q.explanation}" for i, q in enumerate(questions))
     system = load_prompt("mcq_checker").format(exam=exam["name"])
-    review = llm.extract(MCQReview, user=f"<questions>\n{body}\n</questions>", system=system, effort="medium", feature="mcq_review")
+    review = llm.extract(MCQReview, user=f"<questions>\n{body}\n</questions>", system=system, effort="medium", feature="mcq_review",
+                         timeout=120)
     verdict = {c.index: c for c in review.checks}
     kept: list[MCQ] = []
     for i, q in enumerate(questions):

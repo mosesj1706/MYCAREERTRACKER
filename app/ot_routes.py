@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse, Response
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
 
-from app.core import countries, cpd, documents, letters, profile as profile_store, tracker
+from app.core import countries, cpd, documents, exams, letters, profile as profile_store, tracker
 from app.core.cv_ot import PHOTO_PATH
 
 router = APIRouter(prefix="/api")
@@ -85,6 +85,73 @@ def list_exams():
                            "selected_country": e["country"] in selected} for e in exams],
             "no_exam": [n | {"country_name": names.get(n["country"], n["country"]), "selected_country": n["country"] in selected}
                         for n in countries.no_exam_notes()]}
+
+
+# ----------------------------------------------------------------------------- exam question bank & sessions
+@router.get("/exam-bank/{exam_id}")
+def exam_bank(exam_id: str):
+    if not countries.exam(exam_id):
+        raise HTTPException(404, "Unknown exam.")
+    return exams.bank_stats(exam_id) | {"sessions": exams.list_sessions(exam_id)}
+
+
+class SessionIn(BaseModel):
+    exam: str
+    mode: str = "quick"      # quick | timed | full
+    source: str = "new"      # new | bank | mistakes
+    n: int = 5
+    topics: list[str] = []
+    retry_of: int | None = None  # a finished session: practise exactly its wrong answers
+
+
+@router.post("/exam-sessions")
+def start_session(body: SessionIn):
+    p = _profile_or_none()
+    try:
+        return exams.start(body.exam, body.mode, body.source, body.n, body.topics, p.target.primary_role if p else "Occupational Therapist",
+                           retry_of=body.retry_of)
+    except KeyError:
+        raise HTTPException(404, "Unknown exam.")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except RuntimeError as e:
+        raise HTTPException(503, str(e))
+
+
+@router.get("/exam-sessions/{session_id}")
+def get_session(session_id: int):
+    s = exams.get(session_id)
+    if not s:
+        raise HTTPException(404, "Session not found.")
+    return s
+
+
+class SubmitIn(BaseModel):
+    answers: list[dict]
+    seconds_used: int | None = None
+
+
+@router.post("/exam-sessions/{session_id}/submit")
+def submit_session(session_id: int, body: SubmitIn):
+    try:
+        return exams.submit(session_id, body.answers, body.seconds_used)
+    except KeyError:
+        raise HTTPException(404, "Session not found.")
+
+
+@router.delete("/exam-sessions/{session_id}")
+def delete_session(session_id: int):
+    exams.delete_session(session_id)
+    return {"ok": True}
+
+
+@router.get("/exam-sessions/{session_id}/pdf")
+def session_pdf(session_id: int):
+    s = exams.get(session_id)
+    if not s:
+        raise HTTPException(404, "Session not found.")
+    return Response(exams.pdf(session_id), media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{s["exam"]}-practice-{session_id}.pdf"'})
 
 
 # ----------------------------------------------------------------------------- documents

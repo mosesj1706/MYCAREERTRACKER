@@ -1,0 +1,15 @@
+You plan a set of practice questions for an occupational therapist preparing for {exam}, so that no two questions
+test the same thing. List exactly {n} concepts, this many per topic: {counts}.
+
+About this exam: {exam_style}
+
+- Each concept is one specific, testable point of entry-level OT practice: a condition and the decision it calls
+  for, an assessment and when to use it, a precaution, a principle of a frame of reference, a piece of anatomy that
+  matters clinically. Name it in under 15 words.
+- Every concept must differ from the others and from every question already in her bank (listed in <bank>). A
+  different condition, stage, setting, age group or decision counts as different; rewording the same point does not.
+- Spread widely across each topic: common and less common conditions, the age groups the topic covers, assessment,
+  intervention, precautions and outcomes. The few classic questions that every question set repeats are fine once,
+  only if the bank does not already have them.
+- Only well-established content; nothing that varies between countries or guidelines.
+- topic must be one of the given topics, verbatim.
