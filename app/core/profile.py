@@ -51,7 +51,13 @@ def propose_github_merge(profile: Profile, snap: GitHubSnapshot) -> GitHubMerge:
     repos = "\n\n".join(r.digest() for r in snap.repos)
     user = (f"<current_skills>\n{skills}\n</current_skills>\n\n<current_projects>\n{projects}\n</current_projects>\n\n"
             f"<repositories owner=\"{snap.username}\">\n{repos}\n</repositories>")
-    return plain_model(llm.extract(GitHubMerge, user=user, system=system, effort="high", feature="github_merge"))
+    # GitHubMerge is too large for constrained-output mode, so this goes through the
+    # schema-in-prompt fallback, where thinking tokens share the max_tokens budget with the
+    # answer. With eight repos to describe, effort="high" spent enough of the 16k budget
+    # thinking that the JSON was cut off mid-string; "medium" leaves room for the answer.
+    # (Raising max_tokens instead is not an option: past ~20k the SDK requires streaming.)
+    return plain_model(llm.extract(GitHubMerge, user=user, system=system, effort="medium",
+                                   max_tokens=16000, feature="github_merge"))
 
 
 def _same_point(a: str, b: str) -> bool:

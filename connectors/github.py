@@ -165,10 +165,14 @@ def fetch(username: str, include_forks: bool = False) -> GitHubSnapshot:
                 topics=raw.get("topics") or [], stars=raw.get("stargazers_count", 0),
                 created_at=raw["created_at"], pushed_at=raw["pushed_at"],
             )
-            if raw.get("size", 0) > 0:  # size 0 = empty repo; skip the 4 detail calls
-                langs = _get(c, f"/repos/{full}/languages")
-                repo.languages = langs.json() if langs.status_code == 200 else {}
-                repo.commits = _commit_count(c, full)
+            # `size` is computed asynchronously, so a repo pushed minutes ago still reports 0.
+            # Gating the detail calls on it made a fresh repo look empty. Ask for languages and
+            # the commit count first - those are accurate immediately - and only skip the
+            # heavier tree/readme calls when both say there is nothing there.
+            langs = _get(c, f"/repos/{full}/languages")
+            repo.languages = langs.json() if langs.status_code == 200 else {}
+            repo.commits = _commit_count(c, full)
+            if repo.has_code:
                 repo.top_files = _top_files(c, full, raw.get("default_branch", "main"))
                 repo.key_files = _key_files(c, full, repo.top_files)
                 repo.readme = _readme(c, full)
