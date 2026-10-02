@@ -4,6 +4,7 @@ build_pdf(profile) is the master resume. Pass an application's tailored output t
 version for that job: its summary replaces the profile summary and each rewritten bullet
 replaces the original it was derived from. Nothing else changes.
 """
+import re
 from datetime import date
 from io import BytesIO
 
@@ -26,7 +27,7 @@ S = {
     "name": ParagraphStyle("name", fontName="Helvetica-Bold", fontSize=19, leading=22, textColor=INK, alignment=TA_CENTER),
     "headline": ParagraphStyle("headline", fontName="Helvetica", fontSize=10.5, leading=13, textColor=MUTED, alignment=TA_CENTER),
     "contact": ParagraphStyle("contact", fontName="Helvetica", fontSize=9, leading=12, textColor=MUTED, alignment=TA_CENTER),
-    "h": ParagraphStyle("h", fontName="Helvetica-Bold", fontSize=10.5, leading=13, textColor=INK, spaceBefore=7, spaceAfter=2),
+    "h": ParagraphStyle("h", fontName="Helvetica-Bold", fontSize=10.5, leading=13, textColor=INK, spaceBefore=6, spaceAfter=2),
     "body": ParagraphStyle("body", fontName="Helvetica", fontSize=9.5, leading=12.5, textColor=INK),
     "bullet": ParagraphStyle("bullet", fontName="Helvetica", fontSize=9.5, leading=12.5, textColor=INK, leftIndent=9, bulletIndent=0),
     "role": ParagraphStyle("role", fontName="Helvetica-Bold", fontSize=10, leading=13, textColor=INK, spaceBefore=4),
@@ -54,6 +55,21 @@ def _link(url: str, label: str | None = None) -> str:
     return f'<link href="{url}" color="#1f4fd8">{_esc(label or url.replace("https://", "").replace("http://", ""))}</link>'
 
 
+def _lede(text: str, limit: int = 300) -> str:
+    """The first sentences of a description, up to a budget.
+
+    Profile descriptions are written for the matcher, where more detail means better judgments.
+    A resume wants the opening claim and nothing else, so it takes whole sentences until the
+    budget runs out rather than cutting mid-word.
+    """
+    out = ""
+    for part in re.split(r"(?<=[.!?]) ", text.strip()):
+        if out and len(out) + len(part) + 1 > limit:
+            break
+        out = f"{out} {part}".strip()
+    return out or text[:limit]
+
+
 def _rule():
     return HRFlowable(width="100%", thickness=0.6, color=RULE, spaceBefore=1, spaceAfter=3)
 
@@ -67,7 +83,7 @@ def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_titl
 
     buf = BytesIO()
     # Document properties read like a file the candidate saved themselves: no library name, no "(unspecified)".
-    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=13 * mm, bottomMargin=13 * mm,
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=11 * mm, bottomMargin=11 * mm,
                             title=f"{p.personal_info.name} - Resume", author=p.personal_info.name, subject="Resume",
                             creator=p.personal_info.name, producer=p.personal_info.name)
     f = []
@@ -120,7 +136,7 @@ def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_titl
                 title = _esc(pr.name) + "  <font size=8.5 color='#5b6272'>(private repo - available on request)</font>"
             else:
                 title = _esc(pr.name) + (f"  <font size=8.5>{_link(pr.url)}</font>" if pr.url else "")
-            block = [Paragraph(title, S["role"]), Paragraph(_esc(pr.description), S["body"])]
+            block = [Paragraph(title, S["role"]), Paragraph(_esc(_lede(pr.description)), S["body"])]
             if pr.technologies:
                 block.append(Paragraph(f"<font color='#5b6272'>{_esc(', '.join(pr.technologies))}</font>", S["meta"]))
             f.append(KeepTogether(block))
