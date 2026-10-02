@@ -103,7 +103,7 @@ export default function ProfilePage() {
             <CardHeader title="Education & certs" />
             <div className="px-5 pb-5 space-y-2 text-[13px]">
               {p.education.map((e, i) => <div key={i}><div className="font-medium">{e.degree}{e.field ? ` — ${e.field}` : ""}</div><div className="text-muted">{e.institution}{e.end_year ? ` · ${e.end_year}` : ""}</div></div>)}
-              {p.certifications.map((c, i) => <div key={i} className="flex items-center justify-between gap-2"><span>{c.name}</span><Badge tone={c.status === "completed" ? "success" : "warn"}>{c.status.replace("_", " ")}</Badge></div>)}
+              {p.certifications.map((c, i) => <div key={i}><div className="flex items-baseline justify-between gap-2"><span className="font-medium">{c.name}</span><Badge tone={c.status === "completed" ? "success" : "warn"}>{c.status.replace("_", " ")}</Badge></div>{(c.issuer || c.year) && <div className="text-muted">{[c.issuer, c.year].filter(Boolean).join(" · ")}</div>}</div>)}
               {(p.courses ?? []).map((c, i) => <div key={i}><div className="flex items-center justify-between gap-2"><span>{c.name}</span><Badge>course{c.year ? ` · ${c.year}` : ""}</Badge></div>{c.provider && <div className="text-muted">{c.provider}{c.project ? ` · ${c.project}` : ""}</div>}</div>)}
             </div>
           </Card>
