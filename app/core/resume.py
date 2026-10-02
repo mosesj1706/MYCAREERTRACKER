@@ -96,9 +96,9 @@ def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_titl
     links = []
     if pi.linkedin:
         url = pi.linkedin if pi.linkedin.startswith("http") else "https://" + pi.linkedin
-        links.append(_link(url, "LinkedIn"))
+        links.append(_link(url))   # the URL itself is the label, so an ATS can read it as text
     if pi.github:
-        links.append(_link(pi.github, "GitHub"))
+        links.append(_link(pi.github))   # URL as the label, for the same reason as LinkedIn
     f.append(Paragraph("  ·  ".join([_esc(c) for c in contact] + links), S["contact"]))
     f.append(Spacer(1, 4))
 
@@ -122,7 +122,7 @@ def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_titl
     f += [Paragraph("EXPERIENCE", S["h"]), _rule()]
     for e in p.experience:
         block = [Paragraph(f"{_esc(e.title)} <font color='#5b6272'>· {_esc(e.company)}</font>", S["role"]),
-                 Paragraph(f"{_month(e.start)} – {_month(e.end)}{' · ' + _esc(e.location) if e.location else ''}", S["meta"])]
+                 Paragraph(f"{_month(e.start)} - {_month(e.end)}{' · ' + _esc(e.location) if e.location else ''}", S["meta"])]
         bullets = [Paragraph(_esc(rewrites.get(b, b)), S["bullet"], bulletText="•") for b in e.bullets]
         # Keep the heading with its first bullet only, so a long role can flow across pages.
         f.append(KeepTogether(block + bullets[:1]))
@@ -144,7 +144,7 @@ def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_titl
     # Education & certifications
     f += [Paragraph("EDUCATION & CERTIFICATIONS", S["h"]), _rule()]
     for ed in p.education:
-        years = " – ".join(str(y) for y in (ed.start_year, ed.end_year) if y)
+        years = " - ".join(str(y) for y in (ed.start_year, ed.end_year) if y)
         f.append(Paragraph(f"<b>{_esc(ed.degree)}{', ' + _esc(ed.field) if ed.field else ''}</b> · {_esc(ed.institution)}"
                            f"{' · ' + years if years else ''}{' · ' + _esc(ed.grade) if ed.grade else ''}", S["body"]))
     degrees = {ed.degree.lower() for ed in p.education}
