@@ -153,9 +153,26 @@ def build_pdf(profile: Profile, tailored: TailoredOutput | None = None, job_titl
             continue
         status = "" if c.status == "completed" else f" ({c.status.replace('_', ' ')})"
         f.append(Paragraph(f"{_esc(c.name)}{' · ' + _esc(c.issuer) if c.issuer else ''}{' · ' + str(c.year) if c.year else ''}{status}", S["body"]))
+    # Courses group by provider: three AWS Skill Builder lines say the same thing as one and
+    # cost two extra lines, which is the difference between a two- and three-page resume.
+    by_provider: dict[str, list] = {}
     for c in p.courses:
-        f.append(Paragraph(f"{_esc(c.name)}{' · ' + _esc(c.provider) if c.provider else ''}{' · ' + str(c.year) if c.year else ''}"
-                           f"{' · ' + _esc(c.project) if c.project else ''}", S["body"]))
+        by_provider.setdefault(c.provider or "", []).append(c)
+    for provider, courses in by_provider.items():
+        # Under "AWS Skill Builder:", every course repeating "AWS" or "Amazon" wastes the line.
+        def short(name: str) -> str:
+            if "aws" in provider.lower():
+                for prefix in ("AWS ", "Amazon "):
+                    if name.startswith(prefix):
+                        return name[len(prefix):]
+            return name
+        names = ", ".join(short(c.name) for c in courses)
+        years = sorted({c.year for c in courses if c.year})
+        span = f" · {years[0]}" if len(years) == 1 else (f" · {years[0]}-{years[-1]}" if years else "")
+        head = f"{_esc(provider)}: " if provider else ""
+        projects = [c.project for c in courses if c.project]
+        tail = f" · {_esc(projects[0])}" if len(projects) == 1 else ""
+        f.append(Paragraph(f"{head}{_esc(names)}{span}{tail}", S["body"]))
 
     doc.build(f)
     return _strip_library_marks(buf.getvalue())
