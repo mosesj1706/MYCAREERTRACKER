@@ -212,32 +212,31 @@
           "provider": "Prometric",
           "official_url": "https://www.dha.gov.ae",
           "format": [
-              "Computer-based, about 2 hours",
-              "About 100-150 multiple-choice questions",
-              "Pass mark 60-70% depending on the test",
-              "3 attempts"
+              "Computer-based at Prometric, 3 hours",
+              "150 multiple-choice questions",
+              "Pass mark 55%",
+              "Fee USD 240 (exam code ORA5562), not refundable",
+              "3 attempts",
+              "DHA's reference books: Pedretti, Case-Smith, Cooper (hand therapy), Odom (developmental disabilities), Brown (mental health)"
           ],
-          "seconds_per_question": 60,
-          "style": "Prometric-style computer-based exam: short clinical vignettes and direct knowledge questions across OT practice; four options, one best answer.",
+          "seconds_per_question": 72,
+          "style": "DHA computer-based exam at Prometric: short clinical vignettes and direct knowledge questions; four options, one best answer. DHA bases it on these books, so cite them as the reference where they cover the point: Pedretti's Occupational Therapy: Practice Skills for Physical Dysfunction; Occupational Therapy for Children (Case-Smith); Fundamentals of Hand Therapy (Cooper); Handbook of Developmental Disabilities (Odom); Occupational Therapy in Mental Health: A Vision for Participation (Brown).",
           "topics": [
-              "Neurological rehabilitation",
-              "Orthopaedics & hand therapy",
-              "Paediatrics & sensory integration",
-              "Mental health",
-              "Geriatrics & dementia",
-              "ADLs & assistive technology",
-              "Assessments & outcome measures",
-              "Anatomy, kinesiology & neuroanatomy",
-              "Splinting & orthotics",
-              "Wheelchair seating & positioning",
-              "Frames of reference & OT models",
-              "Ethics, safety & documentation"
+              "Neurological Conditions",
+              "Physical Disabilities",
+              "Developmental Disabilities",
+              "Pediatric Conditions",
+              "Hand Dysfunctions",
+              "Psychosocial Problems & Mental Health",
+              "Community Based Services and Assistive Technology",
+              "Occupational Health and Patient Safety",
+              "Ethics and Professionalism"
           ],
-          "source": "DHA licensing manual and exam guideline (read Sept 2026)",
+          "source": "DHA Healthcare Professional Licensing Assessment Guideline (CBT), Occupational Therapist page, updated Sept 2026",
           "mock": {
-              "questions": 100,
-              "minutes": 120,
-              "pass_percent": 60,
+              "questions": 150,
+              "minutes": 180,
+              "pass_percent": 55,
               "published": true
           }
       },
