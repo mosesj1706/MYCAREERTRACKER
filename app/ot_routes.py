@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse, Response
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
 
-from app.core import countries, cpd, documents, exams, letters, profile as profile_store, tracker
+from app.core import countries, cpd, documents, exams, flashcards, letters, profile as profile_store, tracker
 from app.core.cv_ot import PHOTO_PATH
 
 router = APIRouter(prefix="/api")
@@ -152,6 +152,42 @@ def session_pdf(session_id: int):
         raise HTTPException(404, "Session not found.")
     return Response(exams.pdf(session_id), media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{s["exam"]}-practice-{session_id}.pdf"'})
+
+
+# ----------------------------------------------------------------------------- flashcards
+@router.get("/flashcards")
+def flashcard_summary():
+    return flashcards.summary()
+
+
+@router.get("/flashcards/next")
+def flashcards_next(deck: str | None = None, topic: str | None = None, n: int = 20):
+    return flashcards.next_cards(deck or None, topic or None, min(max(n, 1), 100))
+
+
+class GradeIn(BaseModel):
+    knew: bool
+
+
+@router.post("/flashcards/{card_id}/grade")
+def flashcard_grade(card_id: int, body: GradeIn):
+    try:
+        return flashcards.grade(card_id, body.knew)
+    except KeyError:
+        raise HTTPException(404, "Card not found.")
+
+
+class HideIn(BaseModel):
+    hidden: bool = True
+
+
+@router.post("/flashcards/{card_id}/hide")
+def flashcard_hide(card_id: int, body: HideIn):
+    try:
+        flashcards.set_hidden(card_id, body.hidden)
+    except KeyError:
+        raise HTTPException(404, "Card not found.")
+    return {"ok": True}
 
 
 # ----------------------------------------------------------------------------- documents

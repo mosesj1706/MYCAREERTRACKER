@@ -129,6 +129,20 @@ CREATE TABLE IF NOT EXISTS licence_steps (
     updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     PRIMARY KEY (route_id, step_id)
 );
+CREATE TABLE IF NOT EXISTS flashcards (      -- OT: revision cards, reviewed with spaced repetition
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    deck       TEXT NOT NULL,
+    topic      TEXT NOT NULL,
+    front      TEXT NOT NULL,
+    back       TEXT NOT NULL,
+    box        INTEGER NOT NULL DEFAULT 0,  -- Leitner box: 0 = new or missed, 5 = known for weeks
+    due        TEXT,                        -- date it comes up again
+    seen       INTEGER NOT NULL DEFAULT 0,
+    hidden     INTEGER NOT NULL DEFAULT 0,  -- she marked it wrong or not useful
+    fhash      TEXT NOT NULL,               -- normalised front, to keep a deck free of repeats
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    UNIQUE (deck, fhash)
+);
 """
 
 # Columns added after the first release: (table, column, definition). init() adds any that are missing.
