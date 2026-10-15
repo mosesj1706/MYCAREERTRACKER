@@ -1,28 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clsx } from "clsx";
-import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Download, ExternalLink, Flag, GraduationCap, Info, LayoutGrid, RotateCcw, Timer, Trash2, XCircle } from "lucide-react";
-import { api, type ExamBank, type ExamInfo, type ExamItem, type ExamSession, type ExamsPayload, type Gap } from "../lib/api";
+import { BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Download, Flag, GraduationCap, Info, LayoutGrid, Lock, RotateCcw, Timer, Trash2, XCircle } from "lucide-react";
+import { api, type ExamBank, type ExamInfo, type ExamItem, type ExamPath, type ExamSession, type ExamsPayload, type PathStep } from "../lib/api";
 import { flag } from "../lib/pack";
 import { Badge, Button, Card, CardHeader, Empty, Progress, Segmented, Select, Skeleton } from "../components/ui";
 import { Drawer } from "../components/Drawer";
 import { useToast } from "../components/Toast";
 
 type Mode = "quick" | "timed" | "full";
-type Source = "new" | "bank" | "mistakes";
+type Source = "bank" | "mistakes";
 type Answers = Record<number, { picked?: number; flagged?: boolean }>;
 const GULF = ["AE", "SA", "QA", "OM", "KW", "BH"];
-const PROGRESS_KEY = "exam-progress";  // an unfinished timed session survives switching apps on the iPad
 
 const fmtTime = (s: number) => `${Math.floor(s / 3600) ? Math.floor(s / 3600) + ":" : ""}${String(Math.floor((s % 3600) / 60)).padStart(Math.floor(s / 3600) ? 2 : 1, "0")}:${String(s % 60).padStart(2, "0")}`;
 const MODE_LABEL: Record<Mode, string> = { quick: "Quick-fire", timed: "Timed practice", full: "Full mock" };
-const SOURCE_LABEL: Record<Source, string> = { new: "New questions", bank: "Question bank", mistakes: "My mistakes" };
+const SOURCE_LABEL: Record<string, string> = { new: "New questions", bank: "Question bank", mistakes: "My mistakes" };  // "new": older sessions
 
 /**
- * Licensing-exam practice (OT): pick an exam, then practise quick-fire sets, timed sets or a full-length mock
- * from new questions, the exam's question bank, or past mistakes. Every session is saved with a review.
+ * Licensing-exam practice (OT). The study path comes first: quick-fire rounds of 5, 10 and 15 questions, timed rounds
+ * of 10, 20, 30 and 50, a full mock exam, then a mock interview; passing each unlocks the next. Answers and time are
+ * saved as she goes, so she can leave mid-round and carry on later. Extra practice by topic or from her mistakes sits
+ * below. Nothing here calls the AI except the mock interview.
  */
-export default function ExamPractice() {
+export default function ExamPractice({ onInterview }: { onInterview?: () => void }) {
   const toast = useToast(); const qc = useQueryClient();
   const catalogue = useQuery({ queryKey: ["exams"], queryFn: () => api.get<ExamsPayload>("/api/exams") });
   const exams = catalogue.data?.exams ?? [];
@@ -30,23 +31,30 @@ export default function ExamPractice() {
   useEffect(() => { if (!examId && exams.length) setExamId((exams.find((e) => e.tracked) ?? exams.find((e) => e.selected_country) ?? exams[0]).id); }, [examId, exams]);
   const exam = exams.find((e) => e.id === examId);
   const bank = useQuery({ queryKey: ["exam-bank", examId], queryFn: () => api.get<ExamBank>(`/api/exam-bank/${examId}`), enabled: !!examId });
+  const path = useQuery({ queryKey: ["exam-path", examId], queryFn: () => api.get<ExamPath>(`/api/exam-path/${examId}`), enabled: !!examId });
   const [active, setActive] = useState<ExamSession | null>(null);
   const [review, setReview] = useState<number | null>(null);
-  const [resume, setResume] = useState<{ id: number; answers: Answers; left: number | null; at: number } | null>(() => { try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || "null"); } catch { return null; } });
+  const [source, setSource] = useState<Source>("bank");
+  const [extra, setExtra] = useState(false);
+  const pickSource = (s: Source) => { setSource(s); setExtra(true); setTimeout(() => document.getElementById("exam-start")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50); };
+  const unfinished = bank.data?.sessions.find((s) => !s.finished_at && !s.round);  // free practice she left; path rounds resume from the path
 
-  const resumeSession = async () => {
-    if (!resume) return;
-    try { const s = await api.get<ExamSession>(`/api/exam-sessions/${resume.id}`); if (s.finished_at) { clearProgress(); return; } setExamId(s.exam); setActive(s); }
-    catch { clearProgress(); }
-  };
-  const clearProgress = () => { try { localStorage.removeItem(PROGRESS_KEY); } catch {} setResume(null); };
-  const discard = () => { if (resume) api.del(`/api/exam-sessions/${resume.id}`).catch(() => {}); clearProgress(); };
-  const done = () => { setActive(null); clearProgress(); qc.invalidateQueries({ queryKey: ["exam-bank"] }); qc.invalidateQueries({ queryKey: ["mcq-stats"] }); qc.invalidateQueries({ queryKey: ["analytics"] }); };
-  // leaving mid-session keeps the saved progress, so the Resume banner offers it again
-  const leave = () => { try { setResume(JSON.parse(localStorage.getItem(PROGRESS_KEY) || "null")); } catch {} setActive(null); };
+  const refresh = () => { ["exam-bank", "exam-path", "mcq-stats", "analytics"].forEach((k) => qc.invalidateQueries({ queryKey: [k] })); };
+  const done = () => { setActive(null); refresh(); };
+  const open = async (id: number) => { try { setActive(await api.get<ExamSession>(`/api/exam-sessions/${id}`)); } catch (e) { toast("error", (e as Error).message); } };
+  const startRound = async (round: string) => { try { setActive(await api.post<ExamSession>("/api/exam-sessions", { exam: examId, round })); refresh(); } catch (e) { toast("error", (e as Error).message); } };
+  const mistakes = async (id: number) => { try { setActive(await api.post<ExamSession>("/api/exam-sessions", { exam: examId, mode: "quick", source: "mistakes", retry_of: id })); } catch (e) { toast("error", (e as Error).message); } };
 
-  if (active) return <SessionView key={active.id} session={active} exam={exams.find((e) => e.id === active.exam)} initial={resume?.id === active.id ? resume : null}
-    onLeave={leave} onExit={done} onMistakes={async () => { try { const s = await api.post<ExamSession>("/api/exam-sessions", { exam: active.exam, mode: "quick", source: "mistakes", retry_of: active.id }); clearProgress(); setActive(s); } catch (e) { toast("error", (e as Error).message); } }} />;
+  if (active) {
+    const steps = path.data?.steps ?? [];
+    const at = steps.findIndex((s) => s.id === active.round);
+    const next = at >= 0 ? steps[at + 1] : undefined;
+    return <SessionView key={active.id} session={active} exam={exams.find((e) => e.id === active.exam)} passMark={active.round ? path.data?.pass_percent : undefined}
+      next={next && exam ? stepLabel(next, exam) : undefined}
+      onLeave={() => { setActive(null); refresh(); }} onExit={done} onMistakes={() => mistakes(active.id)}
+      onRetry={active.round ? () => startRound(active.round!) : undefined}
+      onNext={next ? () => (next.mode === "interview" ? (done(), onInterview?.()) : startRound(next.id)) : undefined} />;
+  }
 
   const groups: [string, ExamInfo[]][] = [
     ["Your countries", exams.filter((e) => e.selected_country)],
@@ -56,12 +64,12 @@ export default function ExamPractice() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start">
       <div className="space-y-4">
-        {resume && (
+        {unfinished && (
           <Card className="p-4 flex items-center gap-3 border-accent/40">
             <Timer className="size-5 text-accent shrink-0" />
-            <div className="flex-1 text-[14px]"><b>You have an unfinished exam.</b> <span className="text-muted">{Object.values(resume.answers).filter((a) => a.picked !== undefined).length} answered{resume.left != null ? `, ${fmtTime(resume.left)} left` : ""}.</span></div>
-            <Button size="sm" variant="primary" onClick={resumeSession}>Resume</Button>
-            <Button size="sm" variant="ghost" onClick={() => { if (confirm("Discard this unfinished exam?")) discard(); }}>Discard</Button>
+            <div className="flex-1 text-[14px]"><b>You have an unfinished practice session.</b> <span className="text-muted">{MODE_LABEL[unfinished.mode]} · {unfinished.total} questions.</span></div>
+            <Button size="sm" variant="primary" onClick={() => open(unfinished.id)}>Resume</Button>
+            <Button size="sm" variant="ghost" onClick={async () => { if (confirm("Discard this unfinished session?")) { await api.del(`/api/exam-sessions/${unfinished.id}`).catch(() => {}); refresh(); } }}>Discard</Button>
           </Card>
         )}
         <Card className="p-5">
@@ -70,17 +78,22 @@ export default function ExamPractice() {
               {groups.map(([g, list]) => list.length > 0 && <optgroup key={g} label={g}>{list.map((e) => <option key={e.id} value={e.id}>{flag(e.country)} {e.name} · {e.country_name}</option>)}</optgroup>)}
             </Select></label>
           {exam && (
-            <div className="mt-4 rounded-[12px] bg-fill-2 px-4 py-3.5">
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div className="min-w-0"><div className="font-semibold text-[15px]">{flag(exam.country)} {exam.name}</div><div className="text-[12.5px] text-muted">{exam.regulator} · {exam.provider}</div></div>
-                <a href={exam.official_url} target="_blank" rel="noreferrer" className="text-[13px] text-accent hover:underline inline-flex items-center gap-1 shrink-0">Official site <ExternalLink className="size-3" /></a>
-              </div>
+            <details className="mt-3 rounded-[12px] bg-fill-2 px-4 py-3">
+              <summary className="cursor-pointer text-[13.5px]"><span className="font-semibold">{flag(exam.country)} {exam.name}</span><span className="text-muted"> · {exam.regulator} · exam format</span></summary>
               <ul className="mt-2.5 space-y-1 text-[13px]">{exam.format.map((f, i) => <li key={i} className="flex gap-2"><span className="text-faint">•</span><span>{f}</span></li>)}</ul>
-              <div className="text-[11.5px] text-faint mt-2">Source: {exam.source}. Rules change; check the official site before you book.</div>
-            </div>
+              <div className="text-[11.5px] text-faint mt-2">Source: {exam.source}. Rules change; check the <a href={exam.official_url} target="_blank" rel="noreferrer" className="text-accent hover:underline">official site</a> before you book.</div>
+            </details>
           )}
         </Card>
-        {exam && <StartCard key={exam.id} exam={exam} bank={bank.data} onStart={(s) => { clearProgress(); setActive(s); }} />}
+        {exam && path.data && ((bank.data?.total ?? 0) > 0
+          ? <PathCard exam={exam} path={path.data} onStart={startRound} onResume={open} onInterview={() => onInterview?.()} />
+          : <Card className="p-5 text-[13.5px] text-muted">No questions in the bank for this exam yet, so its study path can't start.</Card>)}
+        {exam && (
+          <details open={extra} onToggle={(e) => setExtra(e.currentTarget.open)} className="px-1">
+            <summary className="text-[14px] font-medium text-accent cursor-pointer">Extra practice: pick topics, or redo your mistakes</summary>
+            <div className="mt-3 -mx-1"><StartCard key={exam.id} exam={exam} bank={bank.data} source={source} setSource={setSource} onStart={(s) => { setActive(s); refresh(); }} /></div>
+          </details>
+        )}
         {(catalogue.data?.no_exam.length ?? 0) > 0 && (
           <details className="px-1">
             <summary className="text-[13.5px] text-accent cursor-pointer">Countries without a licensing exam</summary>
@@ -92,11 +105,13 @@ export default function ExamPractice() {
         <Card>
           <CardHeader title="Question bank" subtitle={exam ? exam.name : undefined} />
           <div className="px-5 pb-4 grid grid-cols-3 gap-2 text-center">
-            {[["Questions", bank.data?.total], ["Answered", bank.data?.answered], ["Mistakes", bank.data?.mistakes]].map(([l, v]) => (
-              <div key={l as string} className="rounded-[10px] bg-fill-2 py-2.5"><div className="rounded-num text-[22px] font-semibold">{v ?? "–"}</div><div className="text-[11.5px] text-muted">{l}</div></div>
-            ))}
+            {([["Questions", bank.data?.total, "bank"], ["Answered", bank.data?.answered, null], ["Mistakes", bank.data?.mistakes, "mistakes"]] as const).map(([l, v, to]) => {
+              const tile = <><div className="rounded-num text-[22px] font-semibold">{v ?? "–"}</div><div className={clsx("text-[11.5px]", to && v ? "text-accent" : "text-muted")}>{l}</div></>;
+              return to && v ? <button key={l} onClick={() => pickSource(to)} className="rounded-[10px] bg-fill-2 py-2.5 hover:brightness-95">{tile}</button>
+                : <div key={l} className="rounded-[10px] bg-fill-2 py-2.5">{tile}</div>;
+            })}
           </div>
-          <p className="px-5 pb-4 text-[12px] text-muted">Every checked question you get is kept here, so you can practise again without waiting for new ones.</p>
+          <p className="px-5 pb-4 text-[12px] text-muted">Your practice questions for this exam, each answer checked. Tap Questions or Mistakes for extra practice from them.</p>
         </Card>
         <Card>
           <CardHeader title="Practice sessions" subtitle="Tap one to review" />
@@ -104,11 +119,11 @@ export default function ExamPractice() {
             {bank.isLoading ? <Skeleton className="h-20" /> : (bank.data?.sessions ?? []).filter((s) => s.finished_at).length === 0 ? <div className="px-2 pb-2 text-[13px] text-muted">Your finished sessions appear here with their scores.</div> : (
               <div className="space-y-1">{bank.data!.sessions.filter((s) => s.finished_at).slice(0, 12).map((s) => {
                 const pct = Math.round((100 * (s.correct ?? 0)) / Math.max(1, s.total));
-                const pass = exam?.mock.pass_percent;
+                const pass = s.round ? path.data?.pass_percent : exam?.mock.pass_percent;
                 return (
                   <button key={s.id} onClick={() => setReview(s.id)} className="w-full flex items-center gap-3 rounded-[10px] px-2 py-2 text-left hover:bg-fill-2">
                     <div className={clsx("rounded-num text-[15px] font-semibold w-12 text-right", pass ? (pct >= pass ? "text-success" : "text-danger") : "")}>{pct}%</div>
-                    <div className="flex-1 min-w-0"><div className="text-[13.5px] font-medium">{MODE_LABEL[s.mode]} · {s.total} q</div><div className="text-[12px] text-muted">{s.finished_at!.slice(0, 16)}{s.seconds_used ? ` · ${fmtTime(s.seconds_used)}` : ""} · {SOURCE_LABEL[s.source]}</div></div>
+                    <div className="flex-1 min-w-0"><div className="text-[13.5px] font-medium">{s.round ? "Study path · " : ""}{MODE_LABEL[s.mode]} · {s.total} q</div><div className="text-[12px] text-muted">{s.finished_at!.slice(0, 16)}{s.seconds_used ? ` · ${fmtTime(s.seconds_used)}` : ""} · {SOURCE_LABEL[s.source]}</div></div>
                     <ChevronRight className="size-4 text-faint" />
                   </button>
                 );
@@ -117,34 +132,77 @@ export default function ExamPractice() {
           </div>
         </Card>
       </div>
-      <ReviewSheet id={review} exam={exam} onClose={() => setReview(null)} onRetake={async () => { const id = review; setReview(null); try { const s = await api.post<ExamSession>("/api/exam-sessions", { exam: examId, mode: "quick", source: "mistakes", retry_of: id }); setActive(s); } catch (e) { toast("error", (e as Error).message); } }} />
+      <ReviewSheet id={review} exam={exam} onClose={() => setReview(null)} onRetake={async () => { const id = review; setReview(null); if (id != null) mistakes(id); }} />
     </div>
   );
 }
 
+// ---------------------------------------------------------------- the study path
+const fmtMinutes = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
+function stepLabel(s: PathStep, exam: ExamInfo): string {
+  if (s.mode === "quick") return `Quick-fire · ${s.n} questions`;
+  if (s.mode === "timed") return `Timed · ${s.n} questions · ${Math.round((s.n * exam.seconds_per_question) / 60)} min`;
+  if (s.mode === "full") return `Full mock exam · ${s.n} questions · ${fmtMinutes(exam.mock.minutes)}`;
+  return "Mock interview";
+}
+const STAGE: Record<PathStep["mode"], string> = { quick: "Quick-fire", timed: "Timed practice", full: "Full mock exam", interview: "Mock interview" };
+
+function PathCard({ exam, path, onStart, onResume, onInterview }: { exam: ExamInfo; path: ExamPath; onStart: (round: string) => void; onResume: (id: number) => void; onInterview: () => void }) {
+  const passed = path.steps.filter((s) => s.status === "passed").length;
+  return (
+    <Card className="p-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div><div className="font-semibold text-[17px]">Study path</div>
+          <div className="text-[13px] text-muted mt-0.5">Pass each round with {path.pass_percent}% or more to unlock the next. Your progress is saved, so you can stop and carry on any time.</div></div>
+        {passed === path.steps.length ? <Badge tone="success">Path complete</Badge> : <span className="text-[13px] text-muted rounded-num">{passed} of {path.steps.length} passed</span>}
+      </div>
+      <Progress value={(100 * passed) / path.steps.length} tone="success" className="mt-3" />
+      <div className="mt-4 space-y-1.5">
+        {path.steps.map((s, i) => {
+          const stage = i === 0 || path.steps[i - 1].mode !== s.mode ? STAGE[s.mode] : null;
+          const interview = s.mode === "interview";
+          const sub = s.status === "locked" ? "Locked: pass the round above to unlock it"
+            : interview ? `Pass with ${path.interview_pass}/10 in the end report${s.best != null ? ` · best ${s.best}/10` : ""} · uses AI credit`
+            : `Pass with ${path.pass_percent}%${s.best != null ? ` · best ${s.best}%` : ""}${s.attempts ? ` · ${s.attempts} attempt${s.attempts > 1 ? "s" : ""}` : ""}${s.resume_id ? " · in progress" : ""}`;
+          const go = () => (interview ? onInterview() : s.resume_id ? onResume(s.resume_id) : onStart(s.id));
+          return (
+            <div key={s.id}>
+              {stage && <div className="text-[11.5px] font-semibold uppercase tracking-wide text-faint px-1 pt-2 pb-1">{stage}</div>}
+              <div className={clsx("flex items-center gap-3 rounded-[12px] px-3 py-2.5", s.status === "open" && "bg-accent-soft/60 ring-1 ring-accent/30", s.status === "locked" && "opacity-55")}>
+                <div className={clsx("size-9 rounded-full grid place-items-center shrink-0 text-[14px] font-semibold rounded-num", s.status === "passed" ? "bg-success text-white" : s.status === "open" ? "bg-accent text-white" : "bg-fill text-muted")}>
+                  {s.status === "passed" ? <Check className="size-4" strokeWidth={3} /> : s.status === "locked" ? <Lock className="size-4" /> : i + 1}
+                </div>
+                <div className="flex-1 min-w-0"><div className="text-[14.5px] font-medium">{stepLabel(s, exam)}</div><div className="text-[12.5px] text-muted">{sub}</div></div>
+                {s.status === "open" && <Button variant="primary" onClick={go}>{s.resume_id ? "Resume" : interview ? "Go to interview" : "Start"}</Button>}
+                {s.status === "passed" && <Button size="sm" onClick={go}>{s.resume_id ? "Resume" : interview ? "Again" : "Practise again"}</Button>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 // ---------------------------------------------------------------- choosing what to practise
-function StartCard({ exam, bank, onStart }: { exam: ExamInfo; bank?: ExamBank; onStart: (s: ExamSession) => void }) {
+function StartCard({ exam, bank, source, setSource, onStart }: { exam: ExamInfo; bank?: ExamBank; source: Source; setSource: (s: Source) => void; onStart: (s: ExamSession) => void }) {
   const toast = useToast();
-  const gaps = useQuery({ queryKey: ["gaps", 1], queryFn: () => api.get<Gap[]>("/api/gaps?min_jobs=1") });
   const [mode, setMode] = useState<Mode>("quick");
-  const [source, setSource] = useState<Source>("new");
   const [n, setN] = useState(5);
   const blueprint = !!exam.weights?.length || exam.id === "notce";
-  const gapTopics = blueprint ? [] : (gaps.data ?? []).filter((g) => g.pressure > 0 && !["credentials", "soft"].includes(g.category ?? "")).slice(0, 4).map((g) => g.skill).filter((g) => !exam.topics.includes(g));
-  const pool = [...exam.topics, ...gapTopics];
+  const pool = exam.topics;
   const [topics, setTopics] = useState<string[] | null>(null);
-  const sel = topics ?? (blueprint ? exam.topics : exam.topics.slice(0, 3));
+  const sel = topics ?? exam.topics;
   const sizes = mode === "quick" ? [5, 10, 15] : [10, 20, 30, 50];
   useEffect(() => { setN(mode === "quick" ? 5 : 20); }, [mode]);
-  const unseen = bank ? bank.total - bank.answered : 0;
-  const needNew = mode === "full" ? Math.max(0, exam.mock.questions - unseen) : source === "new" ? n : 0;
+  const total = bank?.total ?? 0, unseen = bank ? bank.total - bank.answered : 0;
   const start = useMutation({
     mutationFn: () => api.post<ExamSession>("/api/exam-sessions", { exam: exam.id, mode, source: mode === "full" ? "bank" : source, n, topics: mode === "full" ? [] : sel }),
     onSuccess: onStart, onError: (e) => toast("error", (e as Error).message),
   });
-  const available = source === "bank" ? bank?.total ?? 0 : source === "mistakes" ? bank?.mistakes ?? 0 : Infinity;
+  const available = mode === "full" || source === "bank" ? total : bank?.mistakes ?? 0;
   return (
-    <Card className="p-5 space-y-4">
+    <Card id="exam-start" className="p-5 space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <Segmented value={mode} onChange={setMode} options={[{ value: "quick", label: "Quick-fire" }, { value: "timed", label: "Timed practice" }, { value: "full", label: "Full mock exam" }]} />
       </div>
@@ -152,12 +210,12 @@ function StartCard({ exam, bank, onStart }: { exam: ExamInfo; bank?: ExamBank; o
         <div className="rounded-[12px] bg-accent-soft/60 px-4 py-3 text-[13.5px]">
           <div className="font-semibold">{exam.mock.questions} questions · {exam.mock.minutes >= 60 ? `${Math.floor(exam.mock.minutes / 60)} h${exam.mock.minutes % 60 ? ` ${exam.mock.minutes % 60} min` : ""}` : `${exam.mock.minutes} min`}{exam.mock.pass_percent ? ` · pass about ${exam.mock.pass_percent}%` : ""}</div>
           <div className="text-muted text-[12.5px] mt-0.5">{exam.mock.published ? "Same length and time as the real exam's published format." : "Typical Prometric length; your eligibility letter has the exact format."} One question at a time, flag and come back, submit at the end.</div>
-          <div className="text-muted text-[12.5px] mt-1.5">{needNew > 0 ? `Uses ${Math.min(unseen, exam.mock.questions)} unseen questions from your bank and writes ${needNew} new ones (about ${Math.max(1, Math.ceil(needNew / 60))} min to prepare).` : "All questions come from your bank: ready straight away."}</div>
+          <div className="text-muted text-[12.5px] mt-1.5">{total === 0 ? "No questions in the bank for this exam yet." : total < exam.mock.questions ? `Your bank has ${total} questions, so this mock uses all of them (the real exam has ${exam.mock.questions}), with the time scaled to match.` : unseen >= exam.mock.questions ? `All from your bank, questions you haven't seen yet: ${unseen} unseen of ${total}.` : `From your bank: the ${unseen} you haven't seen, then ones you got wrong, then the rest.`}</div>
         </div>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <Segmented value={source} onChange={setSource} options={[{ value: "new", label: "New questions" }, { value: "bank", label: `Question bank${bank ? ` (${bank.total})` : ""}` }, { value: "mistakes", label: `My mistakes${bank ? ` (${bank.mistakes})` : ""}` }]} />
+            <Segmented value={source} onChange={setSource} options={[{ value: "bank", label: `Question bank${bank ? ` (${bank.total})` : ""}` }, { value: "mistakes", label: `My mistakes${bank ? ` (${bank.mistakes})` : ""}` }]} />
           </div>
           <div>
             <div className="text-[13px] text-muted mb-2">{blueprint ? "Exam domains" : "Topics"}</div>
@@ -167,35 +225,54 @@ function StartCard({ exam, bank, onStart }: { exam: ExamInfo; bank?: ExamBank; o
       )}
       <div className="flex items-center gap-3 flex-wrap">
         {mode !== "full" && <Select value={n} onChange={(e) => setN(Number(e.target.value))} className="w-auto min-w-[170px]">{sizes.map((x) => <option key={x} value={x}>{x} questions{mode === "timed" ? ` · ${Math.round((x * exam.seconds_per_question) / 60)} min` : ""}</option>)}</Select>}
-        <Button variant="primary" size="lg" loading={start.isPending} disabled={(mode !== "full" && sel.length === 0) || (mode !== "full" && available === 0)} onClick={() => start.mutate()}>
-          <GraduationCap className="size-4" /> {start.isPending ? (needNew > 12 ? `Preparing ${mode === "full" ? exam.mock.questions : n} questions…` : "Writing questions…") : mode === "full" ? "Start full mock" : mode === "timed" ? "Start timed practice" : "Start"}
+        <Button variant="primary" size="lg" loading={start.isPending} disabled={(mode !== "full" && sel.length === 0) || available === 0} onClick={() => start.mutate()}>
+          <GraduationCap className="size-4" /> {start.isPending ? "Preparing…" : mode === "full" ? "Start full mock" : mode === "timed" ? "Start timed practice" : "Start"}
         </Button>
       </div>
-      {mode !== "full" && source !== "new" && available === 0 && <p className="text-[12.5px] text-muted">{source === "mistakes" ? "No outstanding mistakes for this exam." : "The bank is empty for this exam: practise with new questions first."}</p>}
-      <p className="text-[12px] text-muted flex gap-1.5"><Info className="size-3.5 shrink-0 mt-0.5" />AI-written practice in the style of the exam, not real exam questions. A second review checks every answer key and drops disputed questions; still check anything surprising in your textbook.</p>
+      {mode !== "full" && available === 0 && <p className="text-[12.5px] text-muted">{source === "mistakes" ? "No outstanding mistakes for this exam." : "No questions in the bank for this exam yet."}</p>}
+      <p className="text-[12px] text-muted flex gap-1.5"><Info className="size-3.5 shrink-0 mt-0.5" />Practice questions in the style of the exam, not real exam questions. Every answer key has been checked; still check anything surprising in your textbook.</p>
     </Card>
   );
 }
 
 // ---------------------------------------------------------------- taking a session
-function SessionView({ session, exam, initial, onLeave, onExit, onMistakes }: { session: ExamSession; exam?: ExamInfo; initial: { answers: Answers; left: number | null } | null; onLeave: () => void; onExit: () => void; onMistakes: () => void }) {
+type SessionProps = { session: ExamSession; exam?: ExamInfo; passMark?: number; next?: string; onLeave: () => void; onExit: () => void; onMistakes: () => void; onRetry?: () => void; onNext?: () => void };
+function SessionView({ session, exam, passMark, next, onLeave, onExit, onMistakes, onRetry, onNext }: SessionProps) {
   const toast = useToast();
-  const [answers, setAnswers] = useState<Answers>(initial?.answers ?? {});
-  const [result, setResult] = useState<ExamSession | null>(session.finished_at ? session : null);
-  const [idx, setIdx] = useState(0);
-  const [palette, setPalette] = useState(false);
-  const started = useRef(Date.now());
-  const limit = session.time_limit ?? null;
-  const [left, setLeft] = useState<number | null>(initial?.left ?? limit);
-  const cbt = session.mode !== "quick";
   const items = session.items;
+  const cbt = session.mode !== "quick";
+  // pick up where she left off: answers, flags and time are saved on the server as she goes
+  const [answers, setAnswers] = useState<Answers>(() => Object.fromEntries(items.filter((i) => i.picked != null || i.flagged)
+    .map((i) => [i.position, { picked: i.picked ?? undefined, flagged: i.flagged || undefined }])));
+  const [result, setResult] = useState<ExamSession | null>(session.finished_at ? session : null);
+  const [idx, setIdx] = useState(() => (cbt ? Math.max(0, items.findIndex((i) => i.picked == null)) : 0));
+  const [palette, setPalette] = useState(false);
+  const usedBefore = session.seconds_used ?? 0;
+  const started = useRef(Date.now() - usedBefore * 1000);
+  const limit = session.time_limit ?? null;
+  const [left, setLeft] = useState<number | null>(limit != null ? Math.max(0, limit - usedBefore) : null);
   const answered = Object.values(answers).filter((a) => a.picked !== undefined).length;
 
-  // keep progress so an interrupted session can be resumed
-  useEffect(() => {
+  const payload = () => ({
+    answers: items.map((it) => ({ position: it.position, picked: answers[it.position]?.picked ?? null, flagged: !!answers[it.position]?.flagged })),
+    seconds_used: limit != null && left != null ? limit - left : Math.round((Date.now() - started.current) / 1000),
+  });
+  const latest = useRef(payload);
+  latest.current = payload;
+  const url = `/api/exam-sessions/${session.id}/progress`;
+  const saveNow = () => api.post(url, latest.current()).catch(() => {});
+  useEffect(() => {  // each answer or flag, shortly after she makes it
     if (result) return;
-    try { localStorage.setItem(PROGRESS_KEY, JSON.stringify({ id: session.id, answers, left, at: Date.now() })); } catch {}
-  }, [answers, left, result, session.id]);
+    const t = setTimeout(saveNow, 400);
+    return () => clearTimeout(t);
+  }, [answers]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {  // the clock, every 15 seconds, and whenever she switches away from the app
+    if (result) return;
+    const t = setInterval(saveNow, 15000);
+    const away = () => { if (document.visibilityState === "hidden") navigator.sendBeacon?.(url, new Blob([JSON.stringify(latest.current())], { type: "application/json" })); };
+    document.addEventListener("visibilitychange", away);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", away); };
+  }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (left == null || result) return;
     const t = setInterval(() => setLeft((l) => (l == null ? l : Math.max(0, l - 1))), 1000);
@@ -207,7 +284,7 @@ function SessionView({ session, exam, initial, onLeave, onExit, onMistakes }: { 
       answers: items.map((it) => ({ position: it.position, picked: answers[it.position]?.picked ?? null, flagged: !!answers[it.position]?.flagged })),
       seconds_used: limit != null && left != null ? limit - left : Math.round((Date.now() - started.current) / 1000),
     }),
-    onSuccess: (r) => { setResult(r); try { localStorage.removeItem(PROGRESS_KEY); } catch {} },
+    onSuccess: (r) => setResult(r),
     onError: (e) => toast("error", (e as Error).message),
   });
   useEffect(() => { if (left === 0 && !result && !submit.isPending) { toast("info", "Time's up — your answers have been submitted."); submit.mutate(); } }, [left]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -220,11 +297,11 @@ function SessionView({ session, exam, initial, onLeave, onExit, onMistakes }: { 
     submit.mutate();
   };
 
-  if (result) return <Results session={result} exam={exam} onExit={onExit} onMistakes={onMistakes} />;
+  if (result) return <Results session={result} exam={exam} passMark={passMark} next={next} onExit={onExit} onMistakes={onMistakes} onRetry={onRetry} onNext={onNext} />;
 
   const header = (
     <Card className="px-4 py-3 flex items-center gap-3 flex-wrap sticky top-2 z-10">
-      <Button size="sm" variant="ghost" onClick={() => { if (confirm("Leave this session? Your answers so far are kept, and you can resume it.")) onLeave(); }}><ChevronLeft className="size-4" /> Exit</Button>
+      <Button size="sm" variant="ghost" onClick={async () => { if (confirm("Leave for now? Your answers and time are saved, and you can carry on later.")) { await saveNow(); onLeave(); } }}><ChevronLeft className="size-4" /> Exit</Button>
       <div className="font-semibold text-[14px] flex-1 min-w-0 truncate">{exam ? `${flag(exam.country)} ${exam.name}` : session.exam} · {MODE_LABEL[session.mode]}</div>
       {left != null && <span className={clsx("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[14px] font-semibold rounded-num", left < 300 ? "bg-danger-soft text-danger" : "bg-fill")}><Timer className="size-4" />{fmtTime(left)}</span>}
       <span className="text-[13px] text-muted">{answered}/{items.length} answered</span>
@@ -301,10 +378,11 @@ function QuestionCard(props: { it: ExamItem; picked?: number | null; reveal: boo
 }
 
 // ---------------------------------------------------------------- results and review
-function Results({ session, exam, onExit, onMistakes }: { session: ExamSession; exam?: ExamInfo; onExit: () => void; onMistakes: () => void }) {
+function Results({ session, exam, passMark, next, onExit, onMistakes, onRetry, onNext }: Omit<SessionProps, "onLeave">) {
   const [filter, setFilter] = useState<"all" | "wrong" | "flagged">("wrong");
   const pct = Math.round((100 * (session.correct ?? 0)) / Math.max(1, session.total));
-  const pass = exam?.mock.pass_percent ?? null;
+  const round = !!session.round && passMark != null;  // a study-path round: its own pass mark unlocks the next round
+  const pass = round ? passMark : exam?.mock.pass_percent ?? null;
   const shown = useMemo(() => session.items.filter((it) => filter === "all" || (filter === "wrong" && !it.correct) || (filter === "flagged" && it.flagged)), [session, filter]);
   const wrong = session.items.filter((it) => !it.correct).length;
   return (
@@ -315,12 +393,16 @@ function Results({ session, exam, onExit, onMistakes }: { session: ExamSession; 
             <div className="text-center"><div className="rounded-num text-[32px] font-bold leading-none">{pct}%</div><div className="text-[12px] text-muted mt-1">{session.correct}/{session.total}</div></div>
           </div>
           <div className="flex-1 min-w-[200px]">
-            <div className="text-[20px] font-bold">{pass == null ? "Session complete" : pct >= pass ? "Above the pass mark" : "Below the pass mark"}</div>
-            <div className="text-[14px] text-muted mt-1">{exam?.name} · {MODE_LABEL[session.mode]}{session.seconds_used ? ` · ${fmtTime(session.seconds_used)}` : ""}{pass != null ? ` · pass about ${pass}%` : exam?.id === "nbcot" ? " · NBCOT reports a scaled score, not a percentage" : ""}</div>
+            <div className="text-[20px] font-bold">{round ? (pct >= pass! ? "Round passed" : "Not passed yet") : pass == null ? "Session complete" : pct >= pass ? "Above the pass mark" : "Below the pass mark"}</div>
+            <div className="text-[14px] text-muted mt-1">{round
+              ? (pct >= pass! ? (next ? `Next unlocked: ${next}.` : "That was the last round.") : `You need ${pass}% to unlock the next round. Try it again: questions you haven't seen come first, then the ones you got wrong.`)
+              : <>{exam?.name} · {MODE_LABEL[session.mode]}{session.seconds_used ? ` · ${fmtTime(session.seconds_used)}` : ""}{pass != null ? ` · pass about ${pass}%` : exam?.id === "nbcot" ? " · NBCOT reports a scaled score, not a percentage" : ""}</>}</div>
             <div className="flex flex-wrap gap-2 mt-3">
-              {wrong > 0 && <Button variant="primary" onClick={onMistakes}><RotateCcw className="size-4" /> Practise my mistakes ({wrong})</Button>}
+              {round && pct >= pass! && onNext && <Button variant="primary" onClick={onNext}>Next round <ChevronRight className="size-4" /></Button>}
+              {round && pct < pass! && onRetry && <Button variant="primary" onClick={onRetry}><RotateCcw className="size-4" /> Try again</Button>}
+              {wrong > 0 && <Button variant={round ? "secondary" : "primary"} onClick={onMistakes}><RotateCcw className="size-4" /> Practise my mistakes ({wrong})</Button>}
               <a href={`/api/exam-sessions/${session.id}/pdf`} download><Button><Download className="size-4" /> PDF with answers</Button></a>
-              <Button variant="ghost" onClick={onExit}>Back to exams</Button>
+              <Button variant="ghost" onClick={onExit}>{round ? "Back to study path" : "Back to exams"}</Button>
             </div>
           </div>
         </div>

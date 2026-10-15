@@ -131,7 +131,9 @@ export interface ExamInfo {
 }
 export interface ExamsPayload { exams: ExamInfo[]; no_exam: { country: string; country_name: string; note: string; selected_country: boolean }[] }
 export interface ExamItem { position: number; question_id: number; topic: string; difficulty: string; question: string; options: string[]; answer_index: number; explanation: string; reference?: string | null; picked?: number | null; correct?: number | null; flagged: boolean }
-export interface ExamSession { id: number; exam: string; mode: "quick" | "timed" | "full"; source: "new" | "bank" | "mistakes"; total: number; time_limit?: number | null; seconds_used?: number | null; correct?: number | null; created_at: string; finished_at?: string | null; items: ExamItem[]; by_topic: { topic: string; correct: number; total: number; percent: number }[] }
+export interface ExamSession { id: number; exam: string; round?: string | null; mode: "quick" | "timed" | "full"; source: "new" | "bank" | "mistakes"; total: number; time_limit?: number | null; seconds_used?: number | null; correct?: number | null; created_at: string; finished_at?: string | null; items: ExamItem[]; by_topic: { topic: string; correct: number; total: number; percent: number }[] }
 export interface ExamBank { total: number; answered: number; mistakes: number; by_topic: Record<string, number>; sessions: Omit<ExamSession, "items" | "by_topic">[] }
+export interface PathStep { id: string; mode: "quick" | "timed" | "full" | "interview"; n: number; status: "passed" | "open" | "locked"; best: number | null; attempts: number; resume_id: number | null }
+export interface ExamPath { pass_percent: number; interview_pass: number; steps: PathStep[] }
 export interface Flashcard { id: number; deck: string; topic: string; front: string; back: string; box: number; due?: string | null; seen: number }
 export interface FlashcardSummary { decks: { deck: string; total: number; new: number; due: number; known: number }[]; topics: { topic: string; total: number; due: number }[]; hidden: number }

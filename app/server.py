@@ -544,7 +544,39 @@ def interview_save(sid: str):
 
 @app.delete("/api/interview/{sid}")
 def interview_discard(sid: str):
-    SESSIONS.pop(sid, None)
+    sess = SESSIONS.pop(sid, None)
+    if sess:
+        sess.discard()
+    return {"ok": True}
+
+
+@app.get("/api/interview-unfinished")
+def interview_unfinished():
+    """An interview she left part-way through, or null."""
+    return interview.unfinished()
+
+
+@app.post("/api/interview-unfinished/{row_id}/resume")
+def interview_resume(row_id: int):
+    row = interview.unfinished_row(row_id)
+    if not row:
+        raise HTTPException(404, "That interview has already ended.")
+    p = json.loads(row["params_json"])
+    try:
+        application = _application(p["app_id"]) if p.get("app_id") else None
+    except HTTPException:  # the job was deleted since: carry on without it
+        application = None
+    sess = interview.InterviewSession(_profile(), mode=p["mode"], project=p.get("project"), country=p.get("country"),
+                                      case_id=p.get("case_id"), application=application)
+    sess.messages, sess.row_id = json.loads(row["transcript_json"]), row_id
+    sid = uuid.uuid4().hex
+    SESSIONS[sid] = sess
+    return {"session_id": sid, "messages": sess.messages[1:], "params": p}
+
+
+@app.delete("/api/interview-unfinished/{row_id}")
+def interview_unfinished_delete(row_id: int):
+    interview.delete_unfinished(row_id)
     return {"ok": True}
 
 

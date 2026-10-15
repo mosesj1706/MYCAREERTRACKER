@@ -18,7 +18,7 @@ def weekly_activity() -> list[dict]:
     queries = {
         "JDs analyzed": f"SELECT {_week('created_at')} w, COUNT(*) n FROM applications GROUP BY w",
         "Applied": f"SELECT {_week('changed_at')} w, COUNT(*) n FROM status_history WHERE status='applied' GROUP BY w",
-        "Mock interviews": f"SELECT {_week('created_at')} w, COUNT(*) n FROM interviews GROUP BY w",
+        "Mock interviews": f"SELECT {_week('created_at')} w, COUNT(*) n FROM interviews WHERE finished=1 GROUP BY w",
         "MCQs answered": f"SELECT {_week('created_at')} w, COUNT(*) n FROM mcq_results GROUP BY w",
     }
     rows = []
@@ -65,7 +65,7 @@ def kpis() -> Kpis:
         applied_scores = conn.execute(
             "SELECT AVG(match_score) a FROM applications WHERE status IN ('applied','screening','interview','offer','rejected')").fetchone()["a"]
         rejected_scores = conn.execute("SELECT AVG(match_score) a FROM applications WHERE status='rejected'").fetchone()["a"]
-        interviews = conn.execute("SELECT COUNT(*) n FROM interviews").fetchone()["n"]
+        interviews = conn.execute("SELECT COUNT(*) n FROM interviews WHERE finished=1").fetchone()["n"]
         mcq = conn.execute("SELECT COUNT(*) n, AVG(correct) a FROM mcq_results").fetchone()
     return Kpis(
         tracked=f["saved"], applied=f["applied"],

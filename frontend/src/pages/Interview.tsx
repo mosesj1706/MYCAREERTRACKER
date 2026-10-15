@@ -28,7 +28,7 @@ export default function Interview() {
     <div>
       <PageHeader title={pack.key === "ot" ? "Interview practice" : "Interview playground"} subtitle={label(pack, "interviewer", "A recruiter who has read your profile, the job, and your gaps — and goes straight for them.")}
         actions={<Segmented value={tab} onChange={setTab} options={[{ value: "mock", label: "Mock interview" }, { value: "mcq", label: label(pack, "mcq_tab", "Quick-fire MCQs") }, ...(pack.key === "ot" ? [{ value: "cards" as Tab, label: "Flashcards" }] : []), { value: "history", label: "Past sessions" }]} />} />
-      {tab === "mock" && <Mock init={loc.state} />}{tab === "mcq" && (pack.key === "ot" ? <ExamPractice /> : <Mcq />)}{tab === "cards" && <Flashcards />}{tab === "history" && <HistoryTab />}
+      {tab === "mock" && <Mock init={loc.state} />}{tab === "mcq" && (pack.key === "ot" ? <ExamPractice onInterview={() => setTab("mock")} /> : <Mcq />)}{tab === "cards" && <Flashcards />}{tab === "history" && <HistoryTab />}
     </div>
   );
 }
@@ -92,7 +92,7 @@ function Mock({ init }: { init?: NavState }) {
     } catch (e) { toast("error", (e as Error).message); }
     setStreaming(false);
     if (voice && reply && live.current === id) speak(reply);
-    if (text?.trim().toLowerCase() === "end") setEnded(true);
+    if (text?.trim().toLowerCase() === "end") { setEnded(true); qc.invalidateQueries({ queryKey: ["exam-path"] }); qc.invalidateQueries({ queryKey: ["interviews"] }); }
   };
   const start = async () => {
     if (mode === "project" && !project) { toast("error", "Pick a project to deep-dive."); return; }
@@ -113,13 +113,32 @@ function Mock({ init }: { init?: NavState }) {
     r.onend = () => setListening(false);
     rec.current = r; r.start(); setListening(true);
   };
-  const save = useMutation({ mutationFn: () => api.post(`/api/interview/${sid}/save`), onSuccess: () => { live.current = null; setSid(null); setMsgs([]); qc.invalidateQueries({ queryKey: ["interviews"] }); qc.invalidateQueries({ queryKey: ["analytics"] }); toast("success", "Session saved."); } });
-  const discard = async () => { live.current = null; if ("speechSynthesis" in window) window.speechSynthesis.cancel(); const id = sid; setSid(null); setMsgs([]); setStreaming(false); if (id) await api.del(`/api/interview/${id}`); };
+  const save = useMutation({ mutationFn: () => api.post(`/api/interview/${sid}/save`), onSuccess: () => { live.current = null; setSid(null); setMsgs([]); ["interviews", "analytics", "exam-path", "interview-unfinished"].forEach((k) => qc.invalidateQueries({ queryKey: [k] })); toast("success", "Session saved."); } });
+  const discard = async () => { live.current = null; if ("speechSynthesis" in window) window.speechSynthesis.cancel(); const id = sid; setSid(null); setMsgs([]); setStreaming(false); if (id) await api.del(`/api/interview/${id}`); qc.invalidateQueries({ queryKey: ["interview-unfinished"] }); };
+  // an interview she left part-way is saved after every reply, so she can carry on where she stopped
+  const unfinished = useQuery({ queryKey: ["interview-unfinished"], queryFn: () => api.get<{ id: number; created_at: string; answers: number } | null>("/api/interview-unfinished"), enabled: !sid });
+  const resume = async () => {
+    if (!unfinished.data) return;
+    try {
+      const r = await api.post<{ session_id: string; messages: Msg[]; params: { mode: string; country?: string | null; app_id?: number | null } }>(`/api/interview-unfinished/${unfinished.data.id}/resume`);
+      setMode(r.params.mode); setCountry(r.params.country ?? ""); setAppId(r.params.app_id ?? 0);
+      setSid(r.session_id); setMsgs(r.messages); setEnded(false);
+    } catch (e) { toast("error", (e as Error).message); qc.invalidateQueries({ queryKey: ["interview-unfinished"] }); }
+  };
+  const dropUnfinished = async () => { if (unfinished.data && confirm("Discard the unfinished interview?")) { await api.del(`/api/interview-unfinished/${unfinished.data.id}`).catch(() => {}); qc.invalidateQueries({ queryKey: ["interview-unfinished"] }); } };
   const selectedCountries = ctry.data?.countries.filter((c) => ctry.data!.selection.selected.includes(c.code)) ?? [];
   const modeLabel = modes.find((m) => m.value === mode)?.label.split(" — ")[0] ?? mode;
 
   if (!sid) {
-    return (
+    return (<>
+      {unfinished.data && (
+        <Card className="p-4 mb-4 max-w-3xl flex items-center gap-3 border-accent/40">
+          <History className="size-5 text-accent shrink-0" />
+          <div className="flex-1 text-[14px]"><b>You have an unfinished mock interview.</b> <span className="text-muted">{unfinished.data.answers} answer{unfinished.data.answers === 1 ? "" : "s"} so far · started {unfinished.data.created_at.slice(0, 16)}.</span></div>
+          <Button size="sm" variant="primary" onClick={resume}>Resume</Button>
+          <Button size="sm" variant="ghost" onClick={dropUnfinished}>Discard</Button>
+        </Card>
+      )}
       <Card className="p-6 max-w-3xl">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="text-[13px]"><div className="text-muted mb-1.5">Interview for</div>
@@ -163,11 +182,11 @@ function Mock({ init }: { init?: NavState }) {
         <ul className="text-[13px] text-muted mt-4 space-y-1 list-disc pl-5">
           <li>One question at a time. Every answer gets a <b className="text-text">grade, a critique, and the pro answer</b> built from your real background.</li>
           <li>Type <code className="px-1 rounded bg-surface-2">tutor</code> if you're lost — it explains, then asks again.</li>
-          <li>Type <code className="px-1 rounded bg-surface-2">end</code> for a final report with the one question to rehearse most.</li>
+          <li>Type <code className="px-1 rounded bg-surface-2">end</code> for a final report with the one question to rehearse most{ot ? ", and a score out of 10 (7 or more completes your study path)" : ""}.</li>
         </ul>
         <Button variant="primary" size="lg" className="mt-5" onClick={start}><Bot className="size-4" /> Start interview</Button>
       </Card>
-    );
+    </>);
   }
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4 items-start">

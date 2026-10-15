@@ -98,24 +98,31 @@ def exam_bank(exam_id: str):
 class SessionIn(BaseModel):
     exam: str
     mode: str = "quick"      # quick | timed | full
-    source: str = "new"      # new | bank | mistakes
+    source: str = "bank"     # bank | mistakes
     n: int = 5
     topics: list[str] = []
     retry_of: int | None = None  # a finished session: practise exactly its wrong answers
+    round: str | None = None     # a study-path round (exams.ROUNDS): sets mode and length, resumes one left part-way
+
+
+@router.get("/exam-path/{exam_id}")
+def exam_path(exam_id: str):
+    try:
+        return exams.path(exam_id)
+    except KeyError:
+        raise HTTPException(404, "Unknown exam.")
 
 
 @router.post("/exam-sessions")
 def start_session(body: SessionIn):
-    p = _profile_or_none()
     try:
-        return exams.start(body.exam, body.mode, body.source, body.n, body.topics, p.target.primary_role if p else "Occupational Therapist",
-                           retry_of=body.retry_of)
+        if body.round:
+            return exams.start_round(body.exam, body.round)
+        return exams.start(body.exam, body.mode, body.source, body.n, body.topics, retry_of=body.retry_of)
     except KeyError:
         raise HTTPException(404, "Unknown exam.")
     except ValueError as e:
         raise HTTPException(400, str(e))
-    except RuntimeError as e:
-        raise HTTPException(503, str(e))
 
 
 @router.get("/exam-sessions/{session_id}")
@@ -129,6 +136,15 @@ def get_session(session_id: int):
 class SubmitIn(BaseModel):
     answers: list[dict]
     seconds_used: int | None = None
+
+
+@router.post("/exam-sessions/{session_id}/progress")
+def session_progress(session_id: int, body: SubmitIn):
+    try:
+        exams.save_progress(session_id, body.answers, body.seconds_used)
+    except KeyError:
+        raise HTTPException(404, "Session not found.")
+    return {"ok": True}
 
 
 @router.post("/exam-sessions/{session_id}/submit")

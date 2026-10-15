@@ -1,5 +1,6 @@
 """Mock interviews (multi-turn, streamed) and gap-driven MCQ practice."""
 import json
+import re
 from typing import Iterator
 
 from app.core import countries, cpd, db, llm
@@ -20,6 +21,8 @@ class InterviewSession:
         self.application = application
         self.project = project
         self.messages: list[dict] = []
+        self.params = {"app_id": application.id if application else None, "mode": mode, "project": project, "country": country, "case_id": case_id}
+        self.row_id: int | None = None  # its interviews row, written after every reply
 
         context = f"<candidate_profile>\n{profile.model_dump_json(indent=1)}\n</candidate_profile>"
         if project:
@@ -55,6 +58,22 @@ class InterviewSession:
             chunks.append(chunk)
             yield chunk
         self.messages.append({"role": "assistant", "content": "".join(chunks)})
+        self._persist(ended=user_text.strip().lower() == "end")
+
+    def _persist(self, ended: bool = False) -> None:
+        """Keep the conversation in the database after every reply, so an interview she leaves can be resumed.
+        The "end" report closes it, with the score from its first line."""
+        db.init()
+        with db.connect() as conn:
+            if self.row_id is None:
+                self.row_id = conn.execute(
+                    "INSERT INTO interviews (application_id, kind, transcript_json, params_json, finished) VALUES (?, 'mock', ?, ?, 0)",
+                    (self.params["app_id"], json.dumps(self.messages), json.dumps(self.params))).lastrowid
+            else:
+                conn.execute("UPDATE interviews SET transcript_json=? WHERE id=?", (json.dumps(self.messages), self.row_id))
+            if ended:
+                report = self.messages[-1]["content"]
+                conn.execute("UPDATE interviews SET summary=?, score=?, finished=1 WHERE id=?", (report, report_score(report), self.row_id))
 
     @property
     def turns(self) -> int:
@@ -63,11 +82,51 @@ class InterviewSession:
     def save(self, summary: str | None = None) -> int:
         db.init()
         with db.connect() as conn:
-            cur = conn.execute(
-                "INSERT INTO interviews (application_id, kind, transcript_json, summary) VALUES (?, 'mock', ?, ?)",
-                (self.application.id if self.application else None, json.dumps(self.messages), summary),
-            )
-            return cur.lastrowid
+            if self.row_id is None:
+                self.row_id = conn.execute(
+                    "INSERT INTO interviews (application_id, kind, transcript_json, summary, params_json, score) VALUES (?, 'mock', ?, ?, ?, ?)",
+                    (self.params["app_id"], json.dumps(self.messages), summary, json.dumps(self.params), report_score(summary or ""))).lastrowid
+            else:  # an ended interview keeps its report as the summary
+                conn.execute("UPDATE interviews SET transcript_json=?, summary=COALESCE(summary, ?), finished=1 WHERE id=?",
+                             (json.dumps(self.messages), summary, self.row_id))
+            return self.row_id
+
+    def discard(self) -> None:
+        """Drop an interview she abandons part-way; one with an end report is kept."""
+        if self.row_id is not None:
+            with db.connect() as conn:
+                conn.execute("DELETE FROM interviews WHERE id=? AND finished=0", (self.row_id,))
+
+
+def report_score(report: str) -> int | None:
+    """The 'Score: N/10' line of an end report, or None."""
+    m = re.search(r"Score:\W*(\d{1,2})\s*/\s*10", report or "", re.I)
+    return min(10, int(m.group(1))) if m else None
+
+
+def unfinished() -> dict | None:
+    """The latest interview she left part-way through (after at least one answer), to offer resuming it."""
+    db.init()
+    with db.connect() as conn:
+        rows = conn.execute("SELECT id, created_at, transcript_json, params_json FROM interviews "
+                            "WHERE kind='mock' AND finished=0 AND params_json IS NOT NULL ORDER BY id DESC").fetchall()
+    for r in rows:
+        answers = sum(1 for m in json.loads(r["transcript_json"]) if m["role"] == "user") - 1
+        if answers >= 1:
+            return {"id": r["id"], "created_at": r["created_at"], "answers": answers, "params": json.loads(r["params_json"])}
+    return None
+
+
+def unfinished_row(row_id: int) -> dict | None:
+    db.init()
+    with db.connect() as conn:
+        r = conn.execute("SELECT * FROM interviews WHERE id=? AND finished=0 AND params_json IS NOT NULL", (row_id,)).fetchone()
+    return dict(r) if r else None
+
+
+def delete_unfinished(row_id: int) -> None:
+    with db.connect() as conn:
+        conn.execute("DELETE FROM interviews WHERE id=? AND finished=0", (row_id,))
 
 
 def list_sessions() -> list[dict]:
@@ -75,7 +134,7 @@ def list_sessions() -> list[dict]:
     with db.connect() as conn:
         rows = conn.execute(
             "SELECT i.id, i.created_at, i.summary, i.transcript_json, a.title, a.company "
-            "FROM interviews i LEFT JOIN applications a ON a.id = i.application_id ORDER BY i.id DESC"
+            "FROM interviews i LEFT JOIN applications a ON a.id = i.application_id WHERE i.finished=1 ORDER BY i.id DESC"
         ).fetchall()
     return [dict(r) for r in rows]
 

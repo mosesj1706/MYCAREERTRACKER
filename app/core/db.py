@@ -150,6 +150,10 @@ MIGRATIONS = [
     ("applications", "country", "TEXT"),
     ("applications", "agency_json", "TEXT"),
     ("mcq_results", "exam", "TEXT"),  # OT: the licensing exam being practised for
+    ("exam_sessions", "round", "TEXT"),       # OT: the study-path round it belongs to (exams.ROUNDS), null for free practice
+    ("interviews", "params_json", "TEXT"),    # how the interview was set up, to resume it
+    ("interviews", "finished", "INTEGER NOT NULL DEFAULT 1"),  # 0 while she is part-way through
+    ("interviews", "score", "INTEGER"),       # out of 10, from the end report
 ]
 
 
@@ -170,4 +174,8 @@ def init() -> None:
         conn.executescript(SCHEMA)
         for table, column, definition in MIGRATIONS:
             if column not in {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}:
-                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+                try:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+                except sqlite3.OperationalError as e:  # two first requests racing to add the same column
+                    if "duplicate column" not in str(e):
+                        raise

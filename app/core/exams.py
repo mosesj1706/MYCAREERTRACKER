@@ -1,9 +1,9 @@
 """Licensing-exam practice (OT): a question bank per exam, practice sessions, full-length mocks.
 
-Every question that survives the second review (interview._review) is stored in the exam's bank. A session
-draws its questions from new generation, the bank (questions she hasn't mastered first) or her mistakes
-(questions whose latest answer was wrong). Full mocks use the exam's length and time limit; new questions
-for them are generated in parallel batches of ten. Answers are marked on submit and also written to
+Every question that survives the second review (interview._review) is stored in the exam's bank. Sessions
+draw only from the bank (questions she hasn't mastered first) or her mistakes (questions whose latest answer
+was wrong), so practice never calls the AI; generate() fills the bank when run on purpose, in parallel batches
+of ten. Full mocks use the exam's length and time limit. Answers are marked on submit and also written to
 mcq_results, so topic accuracy and the dashboard trend keep working.
 """
 import hashlib
@@ -25,7 +25,15 @@ from app.core.models import MCQ, MCQPlan
 from app.core.text import plain
 
 MODES = {"quick", "timed", "full"}
-SOURCES = {"new", "bank", "mistakes"}
+SOURCES = {"bank", "mistakes"}
+
+# The study path: rounds unlocked one at a time by scoring PASS_PERCENT or more (DHA's own pass mark is 55%),
+# finished by a mock interview whose end report scores INTERVIEW_PASS/10 or more.
+PASS_PERCENT = 60
+INTERVIEW_PASS = 7
+ROUNDS = [("quick-5", "quick", 5), ("quick-10", "quick", 10), ("quick-15", "quick", 15),
+          ("timed-10", "timed", 10), ("timed-20", "timed", 20), ("timed-30", "timed", 30), ("timed-50", "timed", 50),
+          ("full", "full", 0)]  # 0: the exam's mock length
 BATCH = 10
 DEADLINE = 240  # seconds to wait for a round of batches (a batch of ten normally takes about 40)
 
@@ -184,7 +192,7 @@ def _latest_answers(conn, exam: str) -> dict[int, int]:
     return {r["question_id"]: r["correct"] for r in rows}
 
 
-def _from_bank(exam: str, topics: list[str] | None, n: int, mistakes_only: bool, unseen_only: bool = False) -> list[int]:
+def _from_bank(exam: str, topics: list[str] | None, n: int, mistakes_only: bool) -> list[int]:
     db.init()
     with db.connect() as conn:
         rows = conn.execute("SELECT id, topic FROM exam_questions WHERE exam=?", (exam,)).fetchall()
@@ -192,8 +200,6 @@ def _from_bank(exam: str, topics: list[str] | None, n: int, mistakes_only: bool,
     pool = [r["id"] for r in rows if not topics or r["topic"] in topics]
     if mistakes_only:
         pool = [q for q in pool if latest.get(q) == 0]
-    if unseen_only:
-        pool = [q for q in pool if q not in latest]
     random.shuffle(pool)
     # unseen first, then previously wrong, then the rest
     pool.sort(key=lambda q: 0 if q not in latest else (1 if latest[q] == 0 else 2))
@@ -207,8 +213,9 @@ def _wrong_in(session_id: int) -> list[int]:
     return [r["question_id"] for r in rows]
 
 
-def start(exam_id: str, mode: str, source: str, n: int, topics: list[str], target_role: str, retry_of: int | None = None) -> dict:
-    """retry_of: a finished session whose wrong (and unanswered) questions make up the new one."""
+def start(exam_id: str, mode: str, source: str, n: int, topics: list[str], retry_of: int | None = None, round_id: str | None = None) -> dict:
+    """retry_of: a finished session whose wrong (and unanswered) questions make up the new one.
+    round_id: the study-path round this session is (see path())."""
     exam = countries.exam(exam_id)
     if exam is None:
         raise KeyError(exam_id)
@@ -223,29 +230,81 @@ def start(exam_id: str, mode: str, source: str, n: int, topics: list[str], targe
         ids, source = _wrong_in(retry_of), "mistakes"
         if not ids:
             raise ValueError("No wrong answers in that session.")
-    elif source == "new" and mode != "full":
-        ids = generate(exam["id"], topics, n, target_role)
-    elif mode == "full":  # like the real thing: questions she hasn't seen, topped up with new ones
-        ids = _from_bank(exam["id"], None, n, mistakes_only=False, unseen_only=True)
-        if len(ids) < n:
-            try:
-                ids += [q for q in generate(exam["id"], topics, n - len(ids), target_role) if q not in ids]
-            except RuntimeError:  # no new questions to be had right now: repeat ones she has seen, mistakes first
-                pass
-            ids += [q for q in _from_bank(exam["id"], None, n, mistakes_only=False) if q not in ids][:n - len(ids)]
+    elif mode == "full":  # like the real thing: questions she hasn't seen first, then her mistakes, then the rest
+        ids = _from_bank(exam["id"], None, n, mistakes_only=False)
     else:
         ids = _from_bank(exam["id"], topics, n, mistakes_only=source == "mistakes")
     if not ids:
-        raise ValueError("No questions to practise yet: " + ("you have no outstanding mistakes." if source == "mistakes" else "generate some first."))
+        raise ValueError("No questions to practise yet: " + ("you have no outstanding mistakes." if source == "mistakes" else "the bank is empty for this exam."))
     time_limit = (mock.get("minutes", 120) * 60 * len(ids) // max(1, mock.get("questions", len(ids)))) if mode == "full" else \
         (len(ids) * exam.get("seconds_per_question", 72) if mode == "timed" else None)
     db.init()
     with db.connect() as conn:
-        sid = conn.execute("INSERT INTO exam_sessions (exam, mode, source, total, time_limit) VALUES (?,?,?,?,?)",
-                           (exam["id"], mode, source, len(ids), time_limit)).lastrowid
+        sid = conn.execute("INSERT INTO exam_sessions (exam, mode, source, total, time_limit, round) VALUES (?,?,?,?,?,?)",
+                           (exam["id"], mode, source, len(ids), time_limit, round_id)).lastrowid
         conn.executemany("INSERT INTO exam_answers (session_id, position, question_id) VALUES (?,?,?)",
                          [(sid, i, q) for i, q in enumerate(ids)])
     return get(sid)
+
+
+def _percent(row) -> int:
+    return round(100 * (row["correct"] or 0) / max(1, row["total"]))
+
+
+def path(exam_id: str) -> dict:
+    """Her study path for an exam: each round passed, open (the next one to do) or locked, with her best score,
+    attempts and any session she left part-way. A round is passed by any finished attempt scoring PASS_PERCENT."""
+    exam = countries.exam(exam_id)
+    if exam is None:
+        raise KeyError(exam_id)
+    db.init()
+    with db.connect() as conn:
+        sessions = conn.execute("SELECT id, round, total, correct, finished_at FROM exam_sessions WHERE exam=? AND round IS NOT NULL ORDER BY id",
+                                (exam_id,)).fetchall()
+        interviews = conn.execute("SELECT score, created_at FROM interviews WHERE kind='mock' AND finished=1 AND score IS NOT NULL").fetchall()
+    steps, unlocked, full_passed = [], True, None
+    for rid, mode, n in ROUNDS:
+        done = [r for r in sessions if r["round"] == rid and r["finished_at"]]
+        passed = next((r["finished_at"] for r in done if _percent(r) >= PASS_PERCENT), None)
+        open_id = next((r["id"] for r in reversed(sessions) if r["round"] == rid and not r["finished_at"]), None)
+        steps.append({"id": rid, "mode": mode, "n": n or exam.get("mock", {}).get("questions", 100),
+                      "status": "passed" if passed else "open" if unlocked else "locked",
+                      "best": max((_percent(r) for r in done), default=None), "attempts": len(done),
+                      "resume_id": open_id if unlocked or passed else None})
+        if rid == "full":
+            full_passed = passed
+        unlocked = unlocked and passed is not None
+    scores = [r["score"] for r in interviews if full_passed and r["created_at"] >= full_passed]
+    steps.append({"id": "interview", "mode": "interview", "n": 0,
+                  "status": "passed" if any(x >= INTERVIEW_PASS for x in scores) else "open" if unlocked else "locked",
+                  "best": max(scores, default=None), "attempts": len(scores), "resume_id": None})
+    return {"pass_percent": PASS_PERCENT, "interview_pass": INTERVIEW_PASS, "steps": steps}
+
+
+def start_round(exam_id: str, round_id: str) -> dict:
+    """Start (or resume) a study-path round. Locked rounds can't be started."""
+    step = next((x for x in path(exam_id)["steps"] if x["id"] == round_id and x["mode"] != "interview"), None)
+    if step is None:
+        raise ValueError("Unknown round.")
+    if step["status"] == "locked":
+        raise ValueError("Pass the round before this one first.")
+    if step["resume_id"]:
+        return get(step["resume_id"])
+    return start(exam_id, step["mode"], "bank", step["n"], [], round_id=round_id)
+
+
+def save_progress(session_id: int, answers: list[dict], seconds_used: int | None) -> None:
+    """Keep her answers and time so far in an unfinished session, so she can leave and carry on later."""
+    with db.connect() as conn:
+        s = conn.execute("SELECT finished_at FROM exam_sessions WHERE id=?", (session_id,)).fetchone()
+        if s is None:
+            raise KeyError(session_id)
+        if s["finished_at"]:
+            return
+        conn.executemany("UPDATE exam_answers SET picked=?, flagged=? WHERE session_id=? AND position=?",
+                         [(a.get("picked"), int(bool(a.get("flagged"))), session_id, a["position"]) for a in answers])
+        if seconds_used is not None:
+            conn.execute("UPDATE exam_sessions SET seconds_used=? WHERE id=?", (max(0, seconds_used), session_id))
 
 
 def get(session_id: int) -> dict | None:
