@@ -113,6 +113,34 @@ def exam_path(exam_id: str):
         raise HTTPException(404, "Unknown exam.")
 
 
+@router.post("/exam-path/{exam_id}/restart")
+def exam_path_restart(exam_id: str):
+    try:
+        return exams.restart_path(exam_id)
+    except KeyError:
+        raise HTTPException(404, "Unknown exam.")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.get("/exam-path/{exam_id}/report")
+def exam_path_report(exam_id: str, cycle: int | None = None):
+    try:
+        return exams.report(exam_id, cycle)
+    except KeyError:
+        raise HTTPException(404, "No such study path run.")
+
+
+@router.get("/exam-path/{exam_id}/report.pdf")
+def exam_path_report_pdf(exam_id: str, cycle: int | None = None):
+    try:
+        data = exams.report_pdf(exam_id, cycle)
+    except KeyError:
+        raise HTTPException(404, "No such study path run.")
+    return Response(data, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{exam_id}-study-path-report.pdf"'})
+
+
 @router.post("/exam-sessions")
 def start_session(body: SessionIn):
     try:

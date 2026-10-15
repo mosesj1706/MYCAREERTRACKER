@@ -23,12 +23,17 @@ const TECH_MODES = [
 export default function Interview() {
   const pack = usePack();
   const loc = useLocation() as { state?: NavState };
-  const [tab, setTab] = useState<Tab>("mock");
+  // reopen the tab she used last; a link from another page (a job, a case) always opens the mock interview
+  const [tab, setTabState] = useState<Tab>(() => {
+    if (loc.state?.app_id || loc.state?.mode || loc.state?.case_id) return "mock";
+    try { const t = localStorage.getItem("interview-tab"); return (["mock", "mcq", "cards", "history"] as const).includes(t as Tab) ? (t as Tab) : "mock"; } catch { return "mock"; }
+  });
+  const setTab = (t: Tab) => { setTabState(t); try { localStorage.setItem("interview-tab", t); } catch {} };
   return (
     <div>
       <PageHeader title={pack.key === "ot" ? "Interview practice" : "Interview playground"} subtitle={label(pack, "interviewer", "A recruiter who has read your profile, the job, and your gaps — and goes straight for them.")}
         actions={<Segmented value={tab} onChange={setTab} options={[{ value: "mock", label: "Mock interview" }, { value: "mcq", label: label(pack, "mcq_tab", "Quick-fire MCQs") }, ...(pack.key === "ot" ? [{ value: "cards" as Tab, label: "Flashcards" }] : []), { value: "history", label: "Past sessions" }]} />} />
-      {tab === "mock" && <Mock init={loc.state} />}{tab === "mcq" && (pack.key === "ot" ? <ExamPractice onInterview={() => setTab("mock")} /> : <Mcq />)}{tab === "cards" && <Flashcards />}{tab === "history" && <HistoryTab />}
+      {tab === "mock" && <Mock init={loc.state} />}{tab === "mcq" && (pack.key === "ot" ? <ExamPractice /> : <Mcq />)}{tab === "cards" && <Flashcards />}{tab === "history" && <HistoryTab />}
     </div>
   );
 }
@@ -92,7 +97,7 @@ function Mock({ init }: { init?: NavState }) {
     } catch (e) { toast("error", (e as Error).message); }
     setStreaming(false);
     if (voice && reply && live.current === id) speak(reply);
-    if (text?.trim().toLowerCase() === "end") { setEnded(true); qc.invalidateQueries({ queryKey: ["exam-path"] }); qc.invalidateQueries({ queryKey: ["interviews"] }); }
+    if (text?.trim().toLowerCase() === "end") { setEnded(true); qc.invalidateQueries({ queryKey: ["interviews"] }); }
   };
   const start = async () => {
     if (mode === "project" && !project) { toast("error", "Pick a project to deep-dive."); return; }
@@ -113,10 +118,10 @@ function Mock({ init }: { init?: NavState }) {
     r.onend = () => setListening(false);
     rec.current = r; r.start(); setListening(true);
   };
-  const save = useMutation({ mutationFn: () => api.post(`/api/interview/${sid}/save`), onSuccess: () => { live.current = null; setSid(null); setMsgs([]); ["interviews", "analytics", "exam-path", "interview-unfinished"].forEach((k) => qc.invalidateQueries({ queryKey: [k] })); toast("success", "Session saved."); } });
+  const save = useMutation({ mutationFn: () => api.post(`/api/interview/${sid}/save`), onSuccess: () => { live.current = null; setSid(null); setMsgs([]); ["interviews", "analytics", "interview-unfinished"].forEach((k) => qc.invalidateQueries({ queryKey: [k] })); toast("success", "Session saved."); } });
   const discard = async () => { live.current = null; if ("speechSynthesis" in window) window.speechSynthesis.cancel(); const id = sid; setSid(null); setMsgs([]); setStreaming(false); if (id) await api.del(`/api/interview/${id}`); qc.invalidateQueries({ queryKey: ["interview-unfinished"] }); };
   // an interview she left part-way is saved after every reply, so she can carry on where she stopped
-  const unfinished = useQuery({ queryKey: ["interview-unfinished"], queryFn: () => api.get<{ id: number; created_at: string; answers: number } | null>("/api/interview-unfinished"), enabled: !sid });
+  const unfinished = useQuery({ queryKey: ["interview-unfinished"], queryFn: () => api.get<{ id: number; created_at: string; answers: number } | null>("/api/interview-unfinished"), enabled: !sid, staleTime: 0 });
   const resume = async () => {
     if (!unfinished.data) return;
     try {
@@ -182,7 +187,7 @@ function Mock({ init }: { init?: NavState }) {
         <ul className="text-[13px] text-muted mt-4 space-y-1 list-disc pl-5">
           <li>One question at a time. Every answer gets a <b className="text-text">grade, a critique, and the pro answer</b> built from your real background.</li>
           <li>Type <code className="px-1 rounded bg-surface-2">tutor</code> if you're lost — it explains, then asks again.</li>
-          <li>Type <code className="px-1 rounded bg-surface-2">end</code> for a final report with the one question to rehearse most{ot ? ", and a score out of 10 (7 or more completes your study path)" : ""}.</li>
+          <li>Type <code className="px-1 rounded bg-surface-2">end</code> for a final report with the one question to rehearse most{ot ? ", and a score out of 10" : ""}.</li>
         </ul>
         <Button variant="primary" size="lg" className="mt-5" onClick={start}><Bot className="size-4" /> Start interview</Button>
       </Card>
@@ -214,7 +219,7 @@ function Mock({ init }: { init?: NavState }) {
       <div className="space-y-3">
         <Card className="p-4 text-[13px] space-y-2">
           <div className="text-muted">Session</div>
-          <div className="flex flex-wrap gap-1.5 items-center"><Badge tone="accent">{modeLabel}</Badge>{country && <Badge>{flag(country)} {country}</Badge>}<span className="text-muted">{msgs.filter((m) => m.role === "user").length} answers</span></div>
+          <div className="flex flex-wrap gap-1.5 items-center"><Badge tone="accent">{modeLabel}</Badge>{country && <Badge>{flag(country)} {country}</Badge>}<span className="text-muted">{(() => { const n = Math.max(0, msgs.filter((m) => m.role === "user").length); return `${n} answer${n === 1 ? "" : "s"}`; })()}</span></div>
           {ot && <button onClick={() => setVoice(!voice)} className="inline-flex items-center gap-1.5 text-[12.5px] text-muted hover:text-text">{voice ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />} Voice {voice ? "on" : "off"}</button>}
           <div className="pt-2 space-y-2">
             <Button className="w-full" onClick={() => !streaming && send("end")} disabled={streaming || ended}><Square className="size-4" /> End & get report</Button>

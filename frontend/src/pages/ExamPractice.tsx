@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clsx } from "clsx";
-import { BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Download, Flag, GraduationCap, Info, LayoutGrid, Lock, RotateCcw, Timer, Trash2, XCircle } from "lucide-react";
-import { api, type ExamBank, type ExamInfo, type ExamItem, type ExamPath, type ExamSession, type ExamsPayload, type PathStep } from "../lib/api";
+import { BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Download, FileText, Flag, GraduationCap, Info, LayoutGrid, Lock, RotateCcw, Timer, Trash2, Trophy, XCircle } from "lucide-react";
+import { api, type ExamBank, type ExamInfo, type ExamItem, type ExamPath, type ExamSession, type ExamsPayload, type PathReport, type PathStep } from "../lib/api";
 import { flag } from "../lib/pack";
 import { Badge, Button, Card, CardHeader, Empty, Progress, Segmented, Select, Skeleton } from "../components/ui";
 import { Drawer } from "../components/Drawer";
@@ -19,11 +19,11 @@ const SOURCE_LABEL: Record<string, string> = { new: "New questions", bank: "Ques
 
 /**
  * Licensing-exam practice (OT). The study path comes first: quick-fire rounds of 5, 10 and 15 questions, timed rounds
- * of 10, 20, 30 and 50, a full mock exam, then a mock interview; passing each unlocks the next. Answers and time are
- * saved as she goes, so she can leave mid-round and carry on later. Extra practice by topic or from her mistakes sits
- * below. Nothing here calls the AI except the mock interview.
+ * of 10, 20, 30 and 50, then a full mock exam; passing each unlocks the next. Answers and time are saved as she goes,
+ * so she can leave mid-round and carry on later. Extra practice by topic or from her mistakes sits below. Nothing
+ * here calls the AI.
  */
-export default function ExamPractice({ onInterview }: { onInterview?: () => void }) {
+export default function ExamPractice() {
   const toast = useToast(); const qc = useQueryClient();
   const catalogue = useQuery({ queryKey: ["exams"], queryFn: () => api.get<ExamsPayload>("/api/exams") });
   const exams = catalogue.data?.exams ?? [];
@@ -53,7 +53,7 @@ export default function ExamPractice({ onInterview }: { onInterview?: () => void
       next={next && exam ? stepLabel(next, exam) : undefined}
       onLeave={() => { setActive(null); refresh(); }} onExit={done} onMistakes={() => mistakes(active.id)}
       onRetry={active.round ? () => startRound(active.round!) : undefined}
-      onNext={next ? () => (next.mode === "interview" ? (done(), onInterview?.()) : startRound(next.id)) : undefined} />;
+      onNext={next ? () => startRound(next.id) : undefined} />;
   }
 
   const groups: [string, ExamInfo[]][] = [
@@ -86,7 +86,9 @@ export default function ExamPractice({ onInterview }: { onInterview?: () => void
           )}
         </Card>
         {exam && path.data && ((bank.data?.total ?? 0) > 0
-          ? <PathCard exam={exam} path={path.data} onStart={startRound} onResume={open} onInterview={() => onInterview?.()} />
+          ? <PathCard exam={exam} path={path.data} onStart={startRound} onResume={open} onRestart={async () => {
+              if (!confirm("Start the study path again from round 1? Your report for this run is kept.")) return;
+              try { await api.post(`/api/exam-path/${examId}/restart`); refresh(); } catch (e) { toast("error", (e as Error).message); } }} />
           : <Card className="p-5 text-[13.5px] text-muted">No questions in the bank for this exam yet, so its study path can't start.</Card>)}
         {exam && (
           <details open={extra} onToggle={(e) => setExtra(e.currentTarget.open)} className="px-1">
@@ -142,29 +144,47 @@ const fmtMinutes = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? 
 function stepLabel(s: PathStep, exam: ExamInfo): string {
   if (s.mode === "quick") return `Quick-fire · ${s.n} questions`;
   if (s.mode === "timed") return `Timed · ${s.n} questions · ${Math.round((s.n * exam.seconds_per_question) / 60)} min`;
-  if (s.mode === "full") return `Full mock exam · ${s.n} questions · ${fmtMinutes(exam.mock.minutes)}`;
-  return "Mock interview";
+  return `Full mock exam · ${s.n} questions · ${fmtMinutes(exam.mock.minutes)}`;
 }
-const STAGE: Record<PathStep["mode"], string> = { quick: "Quick-fire", timed: "Timed practice", full: "Full mock exam", interview: "Mock interview" };
+const STAGE: Record<PathStep["mode"], string> = { quick: "Quick-fire", timed: "Timed practice", full: "Full mock exam" };
 
-function PathCard({ exam, path, onStart, onResume, onInterview }: { exam: ExamInfo; path: ExamPath; onStart: (round: string) => void; onResume: (id: number) => void; onInterview: () => void }) {
+function PathCard({ exam, path, onStart, onResume, onRestart }: { exam: ExamInfo; path: ExamPath; onStart: (round: string) => void; onResume: (id: number) => void; onRestart: () => void }) {
   const passed = path.steps.filter((s) => s.status === "passed").length;
+  const done = path.runs.filter((r) => r.completed_at);
+  const [report, setReport] = useState<number | null>(null);
+  const current = path.runs.find((r) => r.cycle === path.cycle);
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div><div className="font-semibold text-[17px]">Study path</div>
-          <div className="text-[13px] text-muted mt-0.5">Pass each round with {path.pass_percent}% or more to unlock the next. Your progress is saved, so you can stop and carry on any time.</div></div>
-        {passed === path.steps.length ? <Badge tone="success">Path complete</Badge> : <span className="text-[13px] text-muted rounded-num">{passed} of {path.steps.length} passed</span>}
+        <div><div className="font-semibold text-[17px]">Study path{path.cycle > 1 ? ` · run ${path.cycle}` : ""}</div>
+          <div className="text-[13px] text-muted mt-0.5">Pass each round with {path.pass_percent}% or more to unlock the next. A round you retake gets a fresh mix of questions with the answers in a new order. Your progress is saved, so you can stop and carry on any time.</div></div>
+        <div className="text-right">
+          {path.complete ? <Badge tone="success">Path complete</Badge> : <span className="text-[13px] text-muted rounded-num">{passed} of {path.steps.length} passed</span>}
+          {done.length > 0 && <div className="text-[12px] text-muted mt-1">Completed {done.length === 1 ? "once" : `${done.length} times`}</div>}
+        </div>
       </div>
       <Progress value={(100 * passed) / path.steps.length} tone="success" className="mt-3" />
+      {path.complete && current && (
+        <div className="mt-4 rounded-[12px] bg-success-soft/60 px-4 py-3.5 flex items-start gap-3 flex-wrap">
+          <Trophy className="size-5 text-success shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-[220px] text-[13.5px]"><b>You completed the study path{path.cycle > 1 ? ` (run ${path.cycle})` : ""} on {current.completed_at?.slice(0, 10)}.</b>
+            <span className="text-muted"> {current.cards_added ? `${current.cards_added} questions you got wrong are now flashcards in the "My exam mistakes" deck.` : "No new mistakes to turn into flashcards."} The report has your study notes.</span></div>
+          <div className="flex gap-2"><Button size="sm" variant="primary" onClick={() => setReport(path.cycle)}><FileText className="size-3.5" /> Report</Button><Button size="sm" onClick={onRestart}><RotateCcw className="size-3.5" /> Start again</Button></div>
+        </div>
+      )}
+      {done.filter((r) => r.cycle !== path.cycle || !path.complete).length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px]">
+          <span className="text-muted">Earlier runs:</span>
+          {done.filter((r) => r.cycle !== path.cycle).map((r) => <button key={r.cycle} onClick={() => setReport(r.cycle)} className="text-accent hover:underline">Run {r.cycle} report · {r.completed_at?.slice(0, 10)}</button>)}
+        </div>
+      )}
+      <ReportSheet exam={exam} cycle={report} onClose={() => setReport(null)} />
       <div className="mt-4 space-y-1.5">
         {path.steps.map((s, i) => {
           const stage = i === 0 || path.steps[i - 1].mode !== s.mode ? STAGE[s.mode] : null;
-          const interview = s.mode === "interview";
           const sub = s.status === "locked" ? "Locked: pass the round above to unlock it"
-            : interview ? `Pass with ${path.interview_pass}/10 in the end report${s.best != null ? ` · best ${s.best}/10` : ""} · uses AI credit`
             : `Pass with ${path.pass_percent}%${s.best != null ? ` · best ${s.best}%` : ""}${s.attempts ? ` · ${s.attempts} attempt${s.attempts > 1 ? "s" : ""}` : ""}${s.resume_id ? " · in progress" : ""}`;
-          const go = () => (interview ? onInterview() : s.resume_id ? onResume(s.resume_id) : onStart(s.id));
+          const go = () => (s.resume_id ? onResume(s.resume_id) : onStart(s.id));
           return (
             <div key={s.id}>
               {stage && <div className="text-[11.5px] font-semibold uppercase tracking-wide text-faint px-1 pt-2 pb-1">{stage}</div>}
@@ -173,14 +193,64 @@ function PathCard({ exam, path, onStart, onResume, onInterview }: { exam: ExamIn
                   {s.status === "passed" ? <Check className="size-4" strokeWidth={3} /> : s.status === "locked" ? <Lock className="size-4" /> : i + 1}
                 </div>
                 <div className="flex-1 min-w-0"><div className="text-[14.5px] font-medium">{stepLabel(s, exam)}</div><div className="text-[12.5px] text-muted">{sub}</div></div>
-                {s.status === "open" && <Button variant="primary" onClick={go}>{s.resume_id ? "Resume" : interview ? "Go to interview" : "Start"}</Button>}
-                {s.status === "passed" && <Button size="sm" onClick={go}>{s.resume_id ? "Resume" : interview ? "Again" : "Practise again"}</Button>}
+                {s.status === "open" && <Button variant="primary" onClick={go}>{s.resume_id ? "Resume" : "Start"}</Button>}
+                {s.status === "passed" && <Button size="sm" onClick={go}>{s.resume_id ? "Resume" : "Practise again"}</Button>}
               </div>
             </div>
           );
         })}
       </div>
     </Card>
+  );
+}
+
+function ReportSheet({ exam, cycle, onClose }: { exam: ExamInfo; cycle: number | null; onClose: () => void }) {
+  const q = useQuery({ queryKey: ["exam-path-report", exam.id, cycle], queryFn: () => api.get<PathReport>(`/api/exam-path/${exam.id}/report?cycle=${cycle}`), enabled: cycle != null });
+  const r = q.data;
+  const hm = (s: number) => { const m = Math.round(s / 60); return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; };
+  let topic = "";
+  return (
+    <Drawer open={cycle != null} onClose={onClose} title={`Study path report${cycle && cycle > 1 ? ` · run ${cycle}` : ""}`} width={720}>
+      {!r ? <Skeleton className="h-40" /> : (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+            {[["Attempts", r.attempts], ["Questions", r.answered], ["Correct", `${r.percent}%`], ["Time", hm(r.seconds)]].map(([l, v]) => (
+              <div key={l} className="rounded-[10px] bg-fill-2 py-2.5"><div className="rounded-num text-[20px] font-semibold">{v}</div><div className="text-[11.5px] text-muted">{l}</div></div>))}
+          </div>
+          <div className="text-[13px] text-muted">{r.exam} · started {r.started_at.slice(0, 10)} · {r.completed_at ? `completed ${r.completed_at.slice(0, 10)}` : "in progress"}{r.cards_added ? ` · ${r.cards_added} mistakes added to the "${r.deck}" flashcards` : ""}</div>
+          <div><a href={`/api/exam-path/${exam.id}/report.pdf?cycle=${r.cycle}`} download><Button size="sm"><Download className="size-3.5" /> Download as PDF</Button></a></div>
+          <div>
+            <div className="font-semibold text-[15px] mb-2">Rounds</div>
+            <div className="rounded-[12px] bg-fill-2 divide-y divide-border">{r.rounds.filter((x) => x.attempts).map((x) => (
+              <div key={x.id} className="px-3.5 py-2.5 flex items-center gap-3 text-[13px]">
+                <div className="flex-1 min-w-0"><div className="font-medium">{STAGE[x.mode]} · {x.n} questions</div><div className="text-muted">{x.attempts} attempt{x.attempts > 1 ? "s" : ""} · first {x.first}% · best {x.best}%{x.passed_on ? ` · passed ${x.passed_on.slice(0, 10)}` : ""}</div></div>
+                {x.passed_on ? <CheckCircle2 className="size-4 text-success" /> : <XCircle className="size-4 text-danger" />}
+              </div>))}</div>
+          </div>
+          <div>
+            <div className="font-semibold text-[15px] mb-2">Topics, weakest first</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">{r.by_topic.map((t) => <div key={t.topic} className="text-[13px]"><div className="flex justify-between gap-2"><span className="truncate">{t.topic}</span><span className="rounded-num text-muted">{t.correct}/{t.total}</span></div><Progress value={t.percent} tone={t.percent >= 75 ? "success" : t.percent >= 50 ? "warn" : "danger"} className="mt-1" /></div>)}</div>
+          </div>
+          <div>
+            <div className="font-semibold text-[15px]">Study notes: {r.wrong.length} question{r.wrong.length === 1 ? "" : "s"} you got wrong</div>
+            <div className="text-[12.5px] text-muted mb-2">Grouped by topic, weakest first. They are also in your flashcards, in the "{r.deck}" deck.</div>
+            <div className="space-y-3">{r.wrong.map((w, i) => {
+              const head = w.topic !== topic ? (topic = w.topic) : null;
+              return (
+                <div key={i}>
+                  {head && <div className="text-[12px] font-semibold uppercase tracking-wide text-faint pt-2 pb-1">{head}</div>}
+                  <Card className="p-4">
+                    <div className="font-medium text-[14.5px] leading-relaxed">{w.question}</div>
+                    <div className="mt-2 space-y-1">{w.options.map((o, j) => <div key={j} className={clsx("rounded-[9px] px-3 py-2 text-[13.5px]", j === w.answer_index ? "bg-success-soft/70 font-medium" : "text-muted")}><span className="rounded-num mr-2">{"ABCDEF"[j]}</span>{o}</div>)}</div>
+                    <div className="mt-2 text-[13px] text-muted">{w.explanation}{w.reference && <span className="block mt-1 text-[12px]"><BookOpen className="size-3 inline mr-1" />Read more: {w.reference}</span>}{w.times_wrong > 1 && <span className="block mt-1 text-[12px] text-danger">Wrong {w.times_wrong} times</span>}</div>
+                  </Card>
+                </div>
+              );
+            })}</div>
+          </div>
+        </div>
+      )}
+    </Drawer>
   );
 }
 
@@ -219,7 +289,7 @@ function StartCard({ exam, bank, source, setSource, onStart }: { exam: ExamInfo;
           </div>
           <div>
             <div className="text-[13px] text-muted mb-2">{blueprint ? "Exam domains" : "Topics"}</div>
-            <div className="flex flex-wrap gap-1.5">{pool.map((t, i) => <button key={t} onClick={() => setTopics(sel.includes(t) ? sel.filter((x) => x !== t) : [...sel, t])} className={clsx("rounded-full px-3 py-1 text-[13px] font-medium transition", sel.includes(t) ? "bg-accent text-white" : "bg-fill text-text hover:brightness-95")}>{t}{exam.weights?.[i] != null && i < exam.topics.length ? <span className="opacity-70 ml-1">{exam.weights[i]}%</span> : null}{bank?.by_topic[t] ? <span className="opacity-60 ml-1">· {bank.by_topic[t]}</span> : null}</button>)}</div>
+            <div className="flex flex-wrap gap-1.5">{pool.map((t, i) => <button key={t} onClick={() => setTopics((cur) => { const s = cur ?? exam.topics; return s.includes(t) ? s.filter((x) => x !== t) : [...s, t]; })} className={clsx("rounded-full px-3 py-1 text-[13px] font-medium transition", sel.includes(t) ? "bg-accent text-white" : "bg-fill text-text hover:brightness-95")}>{t}{exam.weights?.[i] != null && i < exam.topics.length ? <span className="opacity-70 ml-1">{exam.weights[i]}%</span> : null}{bank?.by_topic[t] ? <span className="opacity-60 ml-1">· {bank.by_topic[t]}</span> : null}</button>)}</div>
           </div>
         </>
       )}
@@ -395,7 +465,7 @@ function Results({ session, exam, passMark, next, onExit, onMistakes, onRetry, o
           <div className="flex-1 min-w-[200px]">
             <div className="text-[20px] font-bold">{round ? (pct >= pass! ? "Round passed" : "Not passed yet") : pass == null ? "Session complete" : pct >= pass ? "Above the pass mark" : "Below the pass mark"}</div>
             <div className="text-[14px] text-muted mt-1">{round
-              ? (pct >= pass! ? (next ? `Next unlocked: ${next}.` : "That was the last round.") : `You need ${pass}% to unlock the next round. Try it again: questions you haven't seen come first, then the ones you got wrong.`)
+              ? (pct >= pass! ? (next ? `Next unlocked: ${next}.` : "That was the last round.") : `You need ${pass}% to unlock the next round. Try it again: you get a fresh mix (questions you haven't seen first, then ones you got wrong), with the answers in a new order.`)
               : <>{exam?.name} · {MODE_LABEL[session.mode]}{session.seconds_used ? ` · ${fmtTime(session.seconds_used)}` : ""}{pass != null ? ` · pass about ${pass}%` : exam?.id === "nbcot" ? " · NBCOT reports a scaled score, not a percentage" : ""}</>}</div>
             <div className="flex flex-wrap gap-2 mt-3">
               {round && pct >= pass! && onNext && <Button variant="primary" onClick={onNext}>Next round <ChevronRight className="size-4" /></Button>}

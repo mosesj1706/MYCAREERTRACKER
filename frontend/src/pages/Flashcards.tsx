@@ -101,7 +101,7 @@ function Round({ cards, onExit }: { cards: Flashcard[]; onExit: () => void }) {
       </div>
       <Card className={clsx("p-6 min-h-[300px] flex flex-col", !shown && "cursor-pointer")} onClick={() => !shown && setShown(true)}>
         <div className="flex items-center gap-2 text-[12px] text-muted"><span>{card.topic}</span><span className="text-faint">·</span><span>{card.deck}</span>{missed.has(card.id) && <Badge tone="warn">again</Badge>}</div>
-        <div className="text-[19px] font-semibold leading-snug mt-3">{card.front}</div>
+        <div className="text-[19px] font-semibold leading-snug mt-3 whitespace-pre-line">{card.front}</div>
         {shown ? <div className="mt-5 pt-4 border-t border-border text-[15.5px] leading-relaxed whitespace-pre-line">{card.back}</div>
           : <div className="mt-auto pt-6 text-center text-[13.5px] text-accent">Tap to show the answer</div>}
       </Card>

@@ -129,6 +129,15 @@ CREATE TABLE IF NOT EXISTS licence_steps (
     updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     PRIMARY KEY (route_id, step_id)
 );
+CREATE TABLE IF NOT EXISTS path_runs (       -- OT: each time she works through an exam's study path
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    exam         TEXT NOT NULL,
+    cycle        INTEGER NOT NULL,           -- 1 for her first run, 2 when she starts again, ...
+    started_at   TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    completed_at TEXT,
+    cards_added  INTEGER,                    -- questions she got wrong, turned into flashcards when the run was completed
+    UNIQUE (exam, cycle)
+);
 CREATE TABLE IF NOT EXISTS flashcards (      -- OT: revision cards, reviewed with spaced repetition
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     deck       TEXT NOT NULL,
@@ -151,6 +160,8 @@ MIGRATIONS = [
     ("applications", "agency_json", "TEXT"),
     ("mcq_results", "exam", "TEXT"),  # OT: the licensing exam being practised for
     ("exam_sessions", "round", "TEXT"),       # OT: the study-path round it belongs to (exams.ROUNDS), null for free practice
+    ("exam_sessions", "cycle", "INTEGER"),    # OT: which run of the study path (path_runs.cycle); null means 1
+    ("exam_answers", "option_order", "TEXT"), # the order its options were shown in, shuffled for every session
     ("interviews", "params_json", "TEXT"),    # how the interview was set up, to resume it
     ("interviews", "finished", "INTEGER NOT NULL DEFAULT 1"),  # 0 while she is part-way through
     ("interviews", "score", "INTEGER"),       # out of 10, from the end report

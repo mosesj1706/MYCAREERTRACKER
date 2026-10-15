@@ -66,6 +66,10 @@ class InterviewSession:
         db.init()
         with db.connect() as conn:
             if self.row_id is None:
+                # interviews left before she answered anything are dropped when a new one starts
+                for r in conn.execute("SELECT id, transcript_json FROM interviews WHERE finished=0").fetchall():
+                    if sum(1 for m in json.loads(r["transcript_json"]) if m["role"] == "user") <= 1:
+                        conn.execute("DELETE FROM interviews WHERE id=?", (r["id"],))
                 self.row_id = conn.execute(
                     "INSERT INTO interviews (application_id, kind, transcript_json, params_json, finished) VALUES (?, 'mock', ?, ?, 0)",
                     (self.params["app_id"], json.dumps(self.messages), json.dumps(self.params))).lastrowid

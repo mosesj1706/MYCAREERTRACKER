@@ -19,7 +19,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer
 
-from app.core import countries, db, interview, llm
+from app.core import countries, db, flashcards, interview, llm
 from app.core.config import load_prompt
 from app.core.models import MCQ, MCQPlan
 from app.core.text import plain
@@ -27,10 +27,11 @@ from app.core.text import plain
 MODES = {"quick", "timed", "full"}
 SOURCES = {"bank", "mistakes"}
 
-# The study path: rounds unlocked one at a time by scoring PASS_PERCENT or more (DHA's own pass mark is 55%),
-# finished by a mock interview whose end report scores INTERVIEW_PASS/10 or more.
+# The study path: rounds unlocked one at a time by scoring PASS_PERCENT or more (DHA's own pass mark is 55%).
+# Completing it closes the run (path_runs), turns the questions she got wrong into MISTAKES_DECK flashcards, and lets
+# her start a new run.
 PASS_PERCENT = 60
-INTERVIEW_PASS = 7
+MISTAKES_DECK = "My exam mistakes"
 ROUNDS = [("quick-5", "quick", 5), ("quick-10", "quick", 10), ("quick-15", "quick", 15),
           ("timed-10", "timed", 10), ("timed-20", "timed", 20), ("timed-30", "timed", 30), ("timed-50", "timed", 50),
           ("full", "full", 0)]  # 0: the exam's mock length
@@ -213,9 +214,19 @@ def _wrong_in(session_id: int) -> list[int]:
     return [r["question_id"] for r in rows]
 
 
-def start(exam_id: str, mode: str, source: str, n: int, topics: list[str], retry_of: int | None = None, round_id: str | None = None) -> dict:
+def _option_order(options: list[str], explanation: str) -> list[int]:
+    """A fresh order for a question's options every time it is asked, so she learns the answer rather than its
+    letter. Options or explanations that refer to positions ("all of the above") keep their order."""
+    order = list(range(len(options)))
+    if not any(_POSITIONAL.search(t) for t in [*options, explanation]):
+        random.shuffle(order)
+    return order
+
+
+def start(exam_id: str, mode: str, source: str, n: int, topics: list[str], retry_of: int | None = None,
+          round_id: str | None = None, cycle: int | None = None) -> dict:
     """retry_of: a finished session whose wrong (and unanswered) questions make up the new one.
-    round_id: the study-path round this session is (see path())."""
+    round_id, cycle: the study-path round this session is, and in which run of the path (see path())."""
     exam = countries.exam(exam_id)
     if exam is None:
         raise KeyError(exam_id)
@@ -240,10 +251,11 @@ def start(exam_id: str, mode: str, source: str, n: int, topics: list[str], retry
         (len(ids) * exam.get("seconds_per_question", 72) if mode == "timed" else None)
     db.init()
     with db.connect() as conn:
-        sid = conn.execute("INSERT INTO exam_sessions (exam, mode, source, total, time_limit, round) VALUES (?,?,?,?,?,?)",
-                           (exam["id"], mode, source, len(ids), time_limit, round_id)).lastrowid
-        conn.executemany("INSERT INTO exam_answers (session_id, position, question_id) VALUES (?,?,?)",
-                         [(sid, i, q) for i, q in enumerate(ids)])
+        sid = conn.execute("INSERT INTO exam_sessions (exam, mode, source, total, time_limit, round, cycle) VALUES (?,?,?,?,?,?,?)",
+                           (exam["id"], mode, source, len(ids), time_limit, round_id, cycle)).lastrowid
+        qs = {r["id"]: r for r in conn.execute(f"SELECT id, options_json, explanation FROM exam_questions WHERE id IN ({','.join('?' * len(ids))})", ids)}
+        conn.executemany("INSERT INTO exam_answers (session_id, position, question_id, option_order) VALUES (?,?,?,?)",
+                         [(sid, i, q, json.dumps(_option_order(json.loads(qs[q]["options_json"]), qs[q]["explanation"]))) for i, q in enumerate(ids)])
     return get(sid)
 
 
@@ -251,18 +263,29 @@ def _percent(row) -> int:
     return round(100 * (row["correct"] or 0) / max(1, row["total"]))
 
 
+def _current_run(conn, exam_id: str):
+    run = conn.execute("SELECT * FROM path_runs WHERE exam=? ORDER BY cycle DESC LIMIT 1", (exam_id,)).fetchone()
+    if run is None:
+        conn.execute("INSERT OR IGNORE INTO path_runs (exam, cycle) VALUES (?, 1)", (exam_id,))
+        run = conn.execute("SELECT * FROM path_runs WHERE exam=? ORDER BY cycle DESC LIMIT 1", (exam_id,)).fetchone()
+    return run
+
+
 def path(exam_id: str) -> dict:
-    """Her study path for an exam: each round passed, open (the next one to do) or locked, with her best score,
-    attempts and any session she left part-way. A round is passed by any finished attempt scoring PASS_PERCENT."""
+    """Her current run of the study path for an exam: each round passed, open (the next one to do) or locked, with
+    her best score, attempts and any session she left part-way. A round is passed by any finished attempt scoring
+    PASS_PERCENT. Also every run so far, so the page can show how many times she has completed it."""
     exam = countries.exam(exam_id)
     if exam is None:
         raise KeyError(exam_id)
     db.init()
     with db.connect() as conn:
-        sessions = conn.execute("SELECT id, round, total, correct, finished_at FROM exam_sessions WHERE exam=? AND round IS NOT NULL ORDER BY id",
-                                (exam_id,)).fetchall()
-        interviews = conn.execute("SELECT score, created_at FROM interviews WHERE kind='mock' AND finished=1 AND score IS NOT NULL").fetchall()
-    steps, unlocked, full_passed = [], True, None
+        run = _current_run(conn, exam_id)
+        sessions = conn.execute("SELECT id, round, total, correct, finished_at FROM exam_sessions WHERE exam=? AND round IS NOT NULL "
+                                "AND COALESCE(cycle, 1)=? ORDER BY id", (exam_id, run["cycle"])).fetchall()
+        runs = [dict(r) for r in conn.execute("SELECT cycle, started_at, completed_at, cards_added FROM path_runs WHERE exam=? ORDER BY cycle",
+                                              (exam_id,))]
+    steps, unlocked = [], True
     for rid, mode, n in ROUNDS:
         done = [r for r in sessions if r["round"] == rid and r["finished_at"]]
         passed = next((r["finished_at"] for r in done if _percent(r) >= PASS_PERCENT), None)
@@ -271,26 +294,99 @@ def path(exam_id: str) -> dict:
                       "status": "passed" if passed else "open" if unlocked else "locked",
                       "best": max((_percent(r) for r in done), default=None), "attempts": len(done),
                       "resume_id": open_id if unlocked or passed else None})
-        if rid == "full":
-            full_passed = passed
         unlocked = unlocked and passed is not None
-    scores = [r["score"] for r in interviews if full_passed and r["created_at"] >= full_passed]
-    steps.append({"id": "interview", "mode": "interview", "n": 0,
-                  "status": "passed" if any(x >= INTERVIEW_PASS for x in scores) else "open" if unlocked else "locked",
-                  "best": max(scores, default=None), "attempts": len(scores), "resume_id": None})
-    return {"pass_percent": PASS_PERCENT, "interview_pass": INTERVIEW_PASS, "steps": steps}
+    if unlocked and run["completed_at"] is None:  # every round passed: close the run
+        _complete(exam_id, run["cycle"])
+        return path(exam_id)
+    return {"pass_percent": PASS_PERCENT, "steps": steps, "cycle": run["cycle"], "complete": run["completed_at"] is not None, "runs": runs}
+
+
+def _complete(exam_id: str, cycle: int) -> None:
+    """Close a run she has finished and turn every question she got wrong in it into a flashcard."""
+    cards = [_mistake_card(w) for w in report(exam_id, cycle)["wrong"]]
+    added = flashcards.add_cards(MISTAKES_DECK, cards) if cards else 0
+    with db.connect() as conn:
+        conn.execute("UPDATE path_runs SET completed_at=COALESCE(completed_at, datetime('now','localtime')), cards_added=? "
+                     "WHERE exam=? AND cycle=?", (added, exam_id, cycle))
+
+
+def _mistake_card(w: dict) -> dict:
+    letters = "ABCDEF"
+    options = "\n".join(f"{letters[j]}. {o}" for j, o in enumerate(w["options"]))
+    ref = f"\n\nRead more: {w['reference']}" if w["reference"] else ""
+    return {"topic": w["topic"], "front": f"{w['question']}\n\n{options}",
+            "back": f"Answer: {letters[w['answer_index']]}. {w['options'][w['answer_index']]}\n\n{w['explanation']}{ref}"}
+
+
+def restart_path(exam_id: str) -> dict:
+    """Start the study path again from round one, once the current run is complete."""
+    if countries.exam(exam_id) is None:
+        raise KeyError(exam_id)
+    db.init()
+    with db.connect() as conn:
+        run = _current_run(conn, exam_id)
+        if run["completed_at"] is None:
+            raise ValueError("Finish the current study path first.")
+        conn.execute("INSERT INTO path_runs (exam, cycle) VALUES (?, ?)", (exam_id, run["cycle"] + 1))
+    return path(exam_id)
+
+
+def report(exam_id: str, cycle: int | None = None) -> dict:
+    """What a run of the study path took: attempts, scores and time per round, accuracy per topic (weakest first),
+    and every question she got wrong, with the answer and explanation, as study notes."""
+    exam = countries.exam(exam_id)
+    if exam is None:
+        raise KeyError(exam_id)
+    db.init()
+    with db.connect() as conn:
+        run = conn.execute("SELECT * FROM path_runs WHERE exam=? AND cycle=?", (exam_id, cycle)).fetchone() if cycle else _current_run(conn, exam_id)
+        if run is None:
+            raise KeyError(cycle)
+        where = "s.exam=? AND s.round IS NOT NULL AND COALESCE(s.cycle, 1)=? AND s.finished_at IS NOT NULL"
+        sessions = conn.execute(f"SELECT * FROM exam_sessions s WHERE {where} ORDER BY s.id", (exam_id, run["cycle"])).fetchall()
+        answers = conn.execute("SELECT a.correct, q.id, q.topic, q.question, q.options_json, q.answer_index, q.explanation, q.reference "
+                               f"FROM exam_answers a JOIN exam_questions q ON q.id = a.question_id JOIN exam_sessions s ON s.id = a.session_id "
+                               f"WHERE {where}", (exam_id, run["cycle"])).fetchall()
+    rounds = []
+    for rid, mode, n in ROUNDS:
+        tries = [s for s in sessions if s["round"] == rid]
+        pcts = [_percent(s) for s in tries]
+        rounds.append({"id": rid, "mode": mode, "n": tries[0]["total"] if tries else n or exam.get("mock", {}).get("questions", 100),
+                       "attempts": len(tries), "first": pcts[0] if pcts else None, "best": max(pcts, default=None),
+                       "passed_on": next((s["finished_at"] for s, p in zip(tries, pcts) if p >= PASS_PERCENT), None),
+                       "seconds": sum(s["seconds_used"] or 0 for s in tries)})
+    topics: dict[str, list[int]] = {}
+    wrong: dict[int, dict] = {}
+    for a in answers:
+        t = topics.setdefault(a["topic"], [0, 0])
+        t[0] += a["correct"] or 0
+        t[1] += 1
+        if not a["correct"]:
+            w = wrong.setdefault(a["id"], {"topic": a["topic"], "question": a["question"], "options": json.loads(a["options_json"]),
+                                           "answer_index": a["answer_index"], "explanation": a["explanation"], "reference": a["reference"],
+                                           "times_wrong": 0})
+            w["times_wrong"] += 1
+    by_topic = sorted(({"topic": t, "correct": c, "total": k, "percent": round(100 * c / k)} for t, (c, k) in topics.items()),
+                      key=lambda d: d["percent"])
+    rank = {d["topic"]: i for i, d in enumerate(by_topic)}
+    correct = sum(a["correct"] or 0 for a in answers)
+    return {"exam": exam["name"], "cycle": run["cycle"], "started_at": run["started_at"], "completed_at": run["completed_at"],
+            "cards_added": run["cards_added"], "deck": MISTAKES_DECK, "pass_percent": PASS_PERCENT, "attempts": len(sessions),
+            "answered": len(answers), "correct": correct, "percent": round(100 * correct / max(1, len(answers))),
+            "seconds": sum(s["seconds_used"] or 0 for s in sessions), "rounds": rounds, "by_topic": by_topic,
+            "wrong": sorted(wrong.values(), key=lambda w: (rank[w["topic"]], -w["times_wrong"]))}
 
 
 def start_round(exam_id: str, round_id: str) -> dict:
     """Start (or resume) a study-path round. Locked rounds can't be started."""
-    step = next((x for x in path(exam_id)["steps"] if x["id"] == round_id and x["mode"] != "interview"), None)
+    step = next((x for x in path(exam_id)["steps"] if x["id"] == round_id), None)
     if step is None:
         raise ValueError("Unknown round.")
     if step["status"] == "locked":
         raise ValueError("Pass the round before this one first.")
     if step["resume_id"]:
         return get(step["resume_id"])
-    return start(exam_id, step["mode"], "bank", step["n"], [], round_id=round_id)
+    return start(exam_id, step["mode"], "bank", step["n"], [], round_id=round_id, cycle=path(exam_id)["cycle"])
 
 
 def save_progress(session_id: int, answers: list[dict], seconds_used: int | None) -> None:
@@ -313,11 +409,15 @@ def get(session_id: int) -> dict | None:
         s = conn.execute("SELECT * FROM exam_sessions WHERE id=?", (session_id,)).fetchone()
         if not s:
             return None
-        rows = conn.execute("SELECT a.position, a.picked, a.correct, a.flagged, q.* FROM exam_answers a JOIN exam_questions q ON q.id = a.question_id "
-                            "WHERE a.session_id=? ORDER BY a.position", (session_id,)).fetchall()
-    items = [{"position": r["position"], "question_id": r["id"], "topic": r["topic"], "difficulty": r["difficulty"], "question": r["question"],
-              "options": json.loads(r["options_json"]), "answer_index": r["answer_index"], "explanation": r["explanation"],
-              "reference": r["reference"], "picked": r["picked"], "correct": r["correct"], "flagged": bool(r["flagged"])} for r in rows]
+        rows = conn.execute("SELECT a.position, a.picked, a.correct, a.flagged, a.option_order, q.* FROM exam_answers a "
+                            "JOIN exam_questions q ON q.id = a.question_id WHERE a.session_id=? ORDER BY a.position", (session_id,)).fetchall()
+    items = []
+    for r in rows:  # options as she saw them; picked and answer_index refer to that order
+        options = json.loads(r["options_json"])
+        order = json.loads(r["option_order"]) if r["option_order"] else list(range(len(options)))
+        items.append({"position": r["position"], "question_id": r["id"], "topic": r["topic"], "difficulty": r["difficulty"], "question": r["question"],
+                      "options": [options[i] for i in order], "answer_index": order.index(r["answer_index"]), "explanation": r["explanation"],
+                      "reference": r["reference"], "picked": r["picked"], "correct": r["correct"], "flagged": bool(r["flagged"])})
     return dict(s) | {"items": items, "by_topic": _by_topic(items) if s["finished_at"] else []}
 
 
@@ -351,6 +451,8 @@ def submit(session_id: int, answers: list[dict], seconds_used: int | None) -> di
                          (it["topic"], it["difficulty"], ok, it["question"], s["exam"]))
         conn.execute("UPDATE exam_sessions SET correct=?, seconds_used=?, finished_at=datetime('now','localtime') WHERE id=?",
                      (correct, seconds_used, session_id))
+    if s.get("round"):
+        path(s["exam"])  # closes the run when this was its last round
     return get(session_id)
 
 
@@ -394,7 +496,7 @@ def pdf(session_id: int) -> bytes:
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm, bottomMargin=16 * mm,
                             title=f"{exam['name']} practice paper")
     f = [Paragraph(esc(f"{exam['name']} practice paper"), h),
-         Paragraph(esc(f"{s['total']} questions · session {s['id']} · {s['created_at'][:10]} · AI-written practice, not real exam questions"), sub),
+         Paragraph(esc(f"{s['total']} questions · session {s['id']} · {s['created_at'][:10]} · practice questions, not real exam questions"), sub),
          Spacer(1, 4 * mm)]
     for it in s["items"]:
         block = [Paragraph(esc(f"{it['position'] + 1}. {it['question']}"), q)]
@@ -405,5 +507,55 @@ def pdf(session_id: int) -> bytes:
         mine = f"  ·  your answer {'ABCD'[it['picked']]}" if it["picked"] is not None else ""
         ref = f"  Read more: {it['reference']}" if it["reference"] else ""
         f.append(Paragraph(f"<b>{it['position'] + 1}. {'ABCD'[it['answer_index']]}</b>{esc(mine)}  {esc(it['explanation'])}{esc(ref)}", k))
+    doc.build(f)
+    return buf.getvalue()
+
+
+def _duration(seconds: int) -> str:
+    h, m = divmod(round(seconds / 60), 60)
+    return f"{h} h {m} min" if h else f"{m} min"
+
+
+ROUND_LABEL = {"quick": "Quick-fire", "timed": "Timed", "full": "Full mock exam"}
+
+
+def report_pdf(exam_id: str, cycle: int | None = None) -> bytes:
+    """The study-path report as a printable PDF: summary, rounds, topics, then her study notes (each question she
+    got wrong, with the answer and explanation), grouped by topic, weakest first."""
+    r = report(exam_id, cycle)
+    esc = lambda t: plain(str(t)).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    h = ParagraphStyle("h", fontName="Helvetica-Bold", fontSize=15, leading=19)
+    h2 = ParagraphStyle("h2", fontName="Helvetica-Bold", fontSize=11.5, leading=15, spaceBefore=10, spaceAfter=3)
+    sub = ParagraphStyle("s", fontName="Helvetica", fontSize=9, leading=12, textColor=colors.HexColor("#5f6368"))
+    line = ParagraphStyle("l", fontName="Helvetica", fontSize=9.6, leading=13)
+    q = ParagraphStyle("q", fontName="Helvetica-Bold", fontSize=10, leading=13.5, spaceBefore=8)
+    o = ParagraphStyle("o", fontName="Helvetica", fontSize=9.6, leading=12.8, leftIndent=12)
+    k = ParagraphStyle("k", fontName="Helvetica", fontSize=9.3, leading=12.5, spaceBefore=3, leftIndent=12)
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm, bottomMargin=16 * mm,
+                            title=f"{r['exam']} study path report")
+    when = f"completed {r['completed_at'][:10]}" if r["completed_at"] else "in progress"
+    f = [Paragraph(esc(f"{r['exam']}: study path report"), h),
+         Paragraph(esc(f"Run {r['cycle']} · started {r['started_at'][:10]} · {when} · {r['attempts']} attempts · {r['answered']} questions · "
+                       f"{r['percent']}% correct · {_duration(r['seconds'])}"), sub),
+         Paragraph("Rounds", h2)]
+    for x in r["rounds"]:
+        if x["attempts"]:
+            f.append(Paragraph(esc(f"{ROUND_LABEL[x['mode']]}, {x['n']} questions: {x['attempts']} attempt{'s' if x['attempts'] > 1 else ''}, "
+                                   f"first {x['first']}%, best {x['best']}%" + (f", passed {x['passed_on'][:10]}" if x["passed_on"] else ", not passed yet")), line))
+    f.append(Paragraph("Topics, weakest first", h2))
+    f += [Paragraph(esc(f"{t['topic']}: {t['correct']}/{t['total']} ({t['percent']}%)"), line) for t in r["by_topic"]]
+    f.append(Paragraph(f"Study notes: {len(r['wrong'])} questions you got wrong", h2))
+    topic = None
+    for w in r["wrong"]:
+        if w["topic"] != topic:
+            topic = w["topic"]
+            f.append(Paragraph(esc(topic), ParagraphStyle("t", parent=h2, fontSize=10.5, textColor=colors.HexColor("#0a6cff"))))
+        block = [Paragraph(esc(w["question"]), q)]
+        block += [Paragraph(esc(f"{'ABCDEF'[j]}.  {opt}"), o) for j, opt in enumerate(w["options"])]
+        ref = f"  Read more: {w['reference']}" if w["reference"] else ""
+        times = f"  (wrong {w['times_wrong']} times)" if w["times_wrong"] > 1 else ""
+        block.append(Paragraph(f"<b>Answer {'ABCDEF'[w['answer_index']]}.</b> {esc(w['explanation'])}{esc(ref)}{esc(times)}", k))
+        f.append(KeepTogether(block))
     doc.build(f)
     return buf.getvalue()
