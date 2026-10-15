@@ -129,6 +129,16 @@ CREATE TABLE IF NOT EXISTS licence_steps (
     updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     PRIMARY KEY (route_id, step_id)
 );
+CREATE TABLE IF NOT EXISTS study_files (     -- OT: PDFs she reads as they are (library.py)
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    title    TEXT NOT NULL,
+    filename TEXT NOT NULL,                  -- the name it was uploaded with
+    stored   TEXT NOT NULL,                  -- its random name under DATA_DIR/library
+    pages    INTEGER,
+    bytes    INTEGER NOT NULL,
+    notes    TEXT NOT NULL DEFAULT '',
+    added_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
 CREATE TABLE IF NOT EXISTS path_runs (       -- OT: each time she works through an exam's study path
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     exam         TEXT NOT NULL,

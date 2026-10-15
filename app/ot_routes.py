@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse, Response
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
 
-from app.core import countries, cpd, documents, exams, flashcards, letters, profile as profile_store, tracker
+from app.core import countries, cpd, documents, exams, flashcards, letters, library, profile as profile_store, tracker
 from app.core.cv_ot import PHOTO_PATH
 
 router = APIRouter(prefix="/api")
@@ -196,6 +196,37 @@ def session_pdf(session_id: int):
         raise HTTPException(404, "Session not found.")
     return Response(exams.pdf(session_id), media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{s["exam"]}-practice-{session_id}.pdf"'})
+
+
+# ----------------------------------------------------------------------------- study materials (PDFs as they are)
+@router.get("/library")
+def list_library():
+    return library.list_files()
+
+
+@router.post("/library")
+async def upload_library(file: UploadFile = File(...), title: str = Form(""), notes: str = Form("")):
+    try:
+        return library.add(await file.read(), file.filename or "upload.pdf", title, notes)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.get("/library/{file_id}/file")
+def library_file(file_id: int):
+    f = library.get(file_id)
+    if not f or not library.file_path(f).exists():
+        raise HTTPException(404, "File not found.")
+    return FileResponse(library.file_path(f), media_type="application/pdf", filename=library.safe_name(f), content_disposition_type="inline")
+
+
+@router.delete("/library/{file_id}")
+def delete_library(file_id: int):
+    try:
+        library.delete(file_id)
+    except KeyError:
+        raise HTTPException(404, "File not found.")
+    return {"ok": True}
 
 
 # ----------------------------------------------------------------------------- flashcards

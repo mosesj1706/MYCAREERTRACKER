@@ -143,5 +143,6 @@ export interface PathReport {
   by_topic: { topic: string; correct: number; total: number; percent: number }[];
   wrong: { topic: string; question: string; options: string[]; answer_index: number; explanation: string; reference: string | null; times_wrong: number }[];
 }
+export interface StudyFile { id: number; title: string; filename: string; pages: number | null; bytes: number; notes: string; added_at: string }
 export interface Flashcard { id: number; deck: string; topic: string; front: string; back: string; box: number; due?: string | null; seen: number }
 export interface FlashcardSummary { decks: { deck: string; total: number; new: number; due: number; known: number }[]; topics: { topic: string; total: number; due: number }[]; hidden: number }

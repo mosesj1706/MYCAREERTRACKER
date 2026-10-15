@@ -10,9 +10,10 @@ import { Badge, Button, Card, CardHeader, Empty, PageHeader, Segmented, Select, 
 import { useToast } from "../components/Toast";
 import ExamPractice from "./ExamPractice";
 import Flashcards from "./Flashcards";
+import StudyMaterials from "./StudyMaterials";
 
 type Msg = { role: "user" | "assistant"; content: string };
-type Tab = "mock" | "mcq" | "cards" | "history";
+type Tab = "mock" | "mcq" | "cards" | "library" | "history";
 type NavState = { app_id?: number; mode?: string; case_id?: number };
 
 const TECH_MODES = [
@@ -26,14 +27,14 @@ export default function Interview() {
   // reopen the tab she used last; a link from another page (a job, a case) always opens the mock interview
   const [tab, setTabState] = useState<Tab>(() => {
     if (loc.state?.app_id || loc.state?.mode || loc.state?.case_id) return "mock";
-    try { const t = localStorage.getItem("interview-tab"); return (["mock", "mcq", "cards", "history"] as const).includes(t as Tab) ? (t as Tab) : "mock"; } catch { return "mock"; }
+    try { const t = localStorage.getItem("interview-tab"); return (["mock", "mcq", "cards", "library", "history"] as const).includes(t as Tab) ? (t as Tab) : "mock"; } catch { return "mock"; }
   });
   const setTab = (t: Tab) => { setTabState(t); try { localStorage.setItem("interview-tab", t); } catch {} };
   return (
     <div>
       <PageHeader title={pack.key === "ot" ? "Interview practice" : "Interview playground"} subtitle={label(pack, "interviewer", "A recruiter who has read your profile, the job, and your gaps — and goes straight for them.")}
-        actions={<Segmented value={tab} onChange={setTab} options={[{ value: "mock", label: "Mock interview" }, { value: "mcq", label: label(pack, "mcq_tab", "Quick-fire MCQs") }, ...(pack.key === "ot" ? [{ value: "cards" as Tab, label: "Flashcards" }] : []), { value: "history", label: "Past sessions" }]} />} />
-      {tab === "mock" && <Mock init={loc.state} />}{tab === "mcq" && (pack.key === "ot" ? <ExamPractice /> : <Mcq />)}{tab === "cards" && <Flashcards />}{tab === "history" && <HistoryTab />}
+        actions={<Segmented value={tab} onChange={setTab} options={[{ value: "mock", label: "Mock interview" }, { value: "mcq", label: label(pack, "mcq_tab", "Quick-fire MCQs") }, ...(pack.key === "ot" ? [{ value: "cards" as Tab, label: "Flashcards" }, { value: "library" as Tab, label: "Study PDFs" }] : []), { value: "history", label: "Past sessions" }]} />} />
+      {tab === "mock" && <Mock init={loc.state} />}{tab === "mcq" && (pack.key === "ot" ? <ExamPractice /> : <Mcq />)}{tab === "cards" && <Flashcards />}{tab === "library" && <StudyMaterials />}{tab === "history" && <HistoryTab />}
     </div>
   );
 }
