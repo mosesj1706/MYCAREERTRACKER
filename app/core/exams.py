@@ -67,7 +67,7 @@ def _qhash(text: str) -> str:
     return hashlib.sha1(re.sub(r"[^a-z0-9]+", " ", text.lower()).strip().encode()).hexdigest()
 
 
-_POSITIONAL = re.compile(r"\b(all|none|both) of the above\b|\bboth [A-D] and [A-D]\b|\b(option|answer|choice)s? [A-D]\b|\b[A-D] (and|or) [A-D]\b", re.I)
+_POSITIONAL = re.compile(r"\b(all|none|both)( of)? the above\b|\bboth [A-E] and [A-E]\b|\b(option|answer|choice)s? [A-E]\b|\b[A-E],? (and|or) [A-E]\b|\b[A-E], [A-E],? (and|or) [A-E]\b", re.I)
 
 
 def _shuffle(q: MCQ) -> MCQ:

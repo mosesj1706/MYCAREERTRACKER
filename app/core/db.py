@@ -172,6 +172,7 @@ MIGRATIONS = [
     ("exam_sessions", "round", "TEXT"),       # OT: the study-path round it belongs to (exams.ROUNDS), null for free practice
     ("exam_sessions", "cycle", "INTEGER"),    # OT: which run of the study path (path_runs.cycle); null means 1
     ("exam_answers", "option_order", "TEXT"), # the order its options were shown in, shuffled for every session
+    ("study_files", "outline_json", "TEXT"),  # its chapters from the PDF's bookmarks; "[]" when it has none
     ("interviews", "params_json", "TEXT"),    # how the interview was set up, to resume it
     ("interviews", "finished", "INTEGER NOT NULL DEFAULT 1"),  # 0 while she is part-way through
     ("interviews", "score", "INTEGER"),       # out of 10, from the end report

@@ -220,6 +220,20 @@ def library_file(file_id: int):
     return FileResponse(library.file_path(f), media_type="application/pdf", filename=library.safe_name(f), content_disposition_type="inline")
 
 
+@router.get("/library/{file_id}/pages")
+def library_pages(file_id: int, start: int, end: int, title: str = ""):
+    """A chapter (pages start..end) as its own PDF."""
+    f = library.get(file_id)
+    if not f or not library.file_path(f).exists():
+        raise HTTPException(404, "File not found.")
+    try:
+        part = library.chapter_pdf(f, start, end)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    name = library.safe_name({"title": f"{f['title']} - {title}" if title else f"{f['title']} pages {start}-{end}"})
+    return FileResponse(part, media_type="application/pdf", filename=name, content_disposition_type="inline")
+
+
 @router.delete("/library/{file_id}")
 def delete_library(file_id: int):
     try:
